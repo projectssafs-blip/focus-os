@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Focus OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- LOCK SCREEN -->
+  <div id="lock-screen" class="lock-screen">
+    <div class="lock-card">
+      <div class="lock-logo">
+        <span class="lock-icon">◈</span>
+        <h1>Focus OS</h1>
+        <p class="lock-sub">Personal workspace. Private access only.</p>
+      </div>
+      <div id="lock-alert" class="lock-alert hidden"></div>
+      <div class="lock-field">
+        <label for="pw-input">Passphrase</label>
+        <div class="pw-wrapper">
+          <input type="password" id="pw-input" placeholder="Enter your passphrase" autocomplete="off" spellcheck="false" maxlength="128" />
+          <button class="pw-toggle" id="pw-toggle" aria-label="Toggle visibility" tabindex="-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
+      </div>
+      <button id="unlock-btn" class="unlock-btn">Unlock</button>
+      <div id="lockout-msg" class="lockout-msg hidden">
+        ⚠ Too many failed attempts. Locked for <span id="lockout-timer">30</span>s.
+      </div>
+      <p class="lock-hint">First time? DevTools console → <code>await Auth.setPassword("yourpassword")</code></p>
+    </div>
+    <div class="lock-bg"></div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app" class="app hidden">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><span>◈</span><span class="sidebar-title">Focus OS</span></div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-page="dashboard">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dashboard
+        </button>
+        <button class="nav-btn" data-page="vlsi">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          VLSI
+        </button>
+        <button class="nav-btn" data-page="cuda">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          CUDA
+        </button>
+        <button class="nav-btn" data-page="gate">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+          GATE Prep
+        </button>
+        <button class="nav-btn" data-page="daily">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          Daily Log
+        </button>
+        <button class="nav-btn" data-page="analytics">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          Analytics
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="streak-badge">🔥 <span id="sidebar-streak">0</span> day streak</div>
+        <button class="export-side-btn" id="export-json-side">💾 Backup JSON</button>
+        <button class="export-side-btn pdf-side" id="export-pdf-side">📄 Export PDF</button>
+        <button class="logout-btn" id="logout-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Lock
+        </button>
+      </div>
+    </aside>
+
+    <div class="topbar">
+      <button id="menu-toggle" class="menu-toggle">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <span class="topbar-title">Focus OS</span>
+      <span id="topbar-page">Dashboard</span>
+    </div>
+
+    <main class="main-content">
+
+      <!-- DASHBOARD -->
+      <section class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Good morning. <em id="greeting-name">Let's build.</em></h2>
+            <p class="page-sub" id="today-date"></p>
+          </div>
+        </div>
+        <div class="quote-card">
+          <span class="quote-mark">"</span>
+          <p id="quote-text">Loading…</p>
+          <span class="quote-author" id="quote-author"></span>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card"><span class="stat-val" id="stat-tasks">0</span><span class="stat-label">Tasks Done</span></div>
+          <div class="stat-card"><span class="stat-val" id="stat-focus">0h</span><span class="stat-label">Focus Time Today</span></div>
+          <div class="stat-card"><span class="stat-val" id="stat-streak">0🔥</span><span class="stat-label">Streak</span></div>
+          <div class="stat-card"><span class="stat-val" id="stat-logs">0</span><span class="stat-label">Days Logged</span></div>
+        </div>
+        <div class="domain-grid">
+          <div class="domain-card" data-domain="vlsi">
+            <div class="domain-card-header"><span class="domain-icon">⚡</span><h3>VLSI</h3><span class="domain-pct" id="dash-vlsi-pct">0%</span></div>
+            <div class="progress-track"><div class="progress-fill" id="dash-vlsi-bar" style="width:0%"></div></div>
+            <p class="domain-card-meta" id="dash-vlsi-meta">0 tasks completed</p>
+          </div>
+          <div class="domain-card" data-domain="cuda">
+            <div class="domain-card-header"><span class="domain-icon">🖥</span><h3>CUDA</h3><span class="domain-pct" id="dash-cuda-pct">0%</span></div>
+            <div class="progress-track"><div class="progress-fill cuda" id="dash-cuda-bar" style="width:0%"></div></div>
+            <p class="domain-card-meta" id="dash-cuda-meta">0 tasks completed</p>
+          </div>
+          <div class="domain-card" data-domain="gate">
+            <div class="domain-card-header"><span class="domain-icon">📖</span><h3>GATE</h3><span class="domain-pct" id="dash-gate-pct">0%</span></div>
+            <div class="progress-track"><div class="progress-fill gate" id="dash-gate-bar" style="width:0%"></div></div>
+            <p class="domain-card-meta" id="dash-gate-meta">0 tasks completed</p>
+          </div>
+        </div>
+        <div class="recent-logs-section">
+          <h3 class="section-title">Recent Activity</h3>
+          <div id="recent-logs-list" class="recent-logs-list"><p class="empty-msg">No entries yet.</p></div>
+        </div>
+      </section>
+
+      <!-- VLSI -->
+      <section class="page" id="page-vlsi">
+        <div class="page-header">
+          <div><h2 class="page-title"><span style="color:var(--vlsi)">⚡</span> VLSI</h2><p class="page-sub">Frontend & Backend Design</p></div>
+          <div class="page-pct-badge" id="vlsi-pct-badge">0%</div>
+        </div>
+        <div class="progress-track big"><div class="progress-fill" id="vlsi-big-bar" style="width:0%"></div></div>
+        <div id="vlsi-active-timer" class="active-timer-bar hidden"></div>
+        <div class="domain-layout">
+          <div class="domain-left">
+            <div class="card">
+              <div class="card-head"><h3>Tasks</h3><span class="task-count" id="vlsi-task-count">0/0</span></div>
+              <div class="task-input-row">
+                <input type="text" class="task-input" id="vlsi-task-input" placeholder="Add a task…" maxlength="200" />
+                <button class="add-btn" onclick="addTask('vlsi')">+</button>
+              </div>
+              <ul class="task-list" id="vlsi-task-list"></ul>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Weekly Goals</h3></div>
+              <textarea class="notes-area" id="vlsi-goals" placeholder="What do you want to achieve this week?"></textarea>
+            </div>
+          </div>
+          <div class="domain-right">
+            <div class="card">
+              <div class="card-head"><h3>What I did today</h3></div>
+              <textarea class="notes-area" id="vlsi-today" placeholder="Describe what you worked on today…"></textarea>
+              <button class="save-btn" onclick="saveToday('vlsi')">Save Entry</button>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Notes</h3></div>
+              <textarea class="notes-area tall" id="vlsi-notes" placeholder="Concepts, references, ideas…"></textarea>
+              <button class="save-btn" onclick="saveNotes('vlsi')">Save Notes</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CUDA -->
+      <section class="page" id="page-cuda">
+        <div class="page-header">
+          <div><h2 class="page-title"><span style="color:var(--cuda)">🖥</span> CUDA Programming</h2><p class="page-sub">GPU Parallel Computing</p></div>
+          <div class="page-pct-badge cuda-badge" id="cuda-pct-badge">0%</div>
+        </div>
+        <div class="progress-track big"><div class="progress-fill cuda" id="cuda-big-bar" style="width:0%"></div></div>
+        <div id="cuda-active-timer" class="active-timer-bar hidden"></div>
+        <div class="domain-layout">
+          <div class="domain-left">
+            <div class="card">
+              <div class="card-head"><h3>Tasks</h3><span class="task-count" id="cuda-task-count">0/0</span></div>
+              <div class="task-input-row">
+                <input type="text" class="task-input" id="cuda-task-input" placeholder="Add a task…" maxlength="200" />
+                <button class="add-btn cuda-add" onclick="addTask('cuda')">+</button>
+              </div>
+              <ul class="task-list" id="cuda-task-list"></ul>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Weekly Goals</h3></div>
+              <textarea class="notes-area" id="cuda-goals" placeholder="What do you want to achieve this week?"></textarea>
+            </div>
+          </div>
+          <div class="domain-right">
+            <div class="card">
+              <div class="card-head"><h3>What I did today</h3></div>
+              <textarea class="notes-area" id="cuda-today" placeholder="Describe what you worked on today…"></textarea>
+              <button class="save-btn cuda-save" onclick="saveToday('cuda')">Save Entry</button>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Notes</h3></div>
+              <textarea class="notes-area tall" id="cuda-notes" placeholder="Kernels, memory, benchmarks…"></textarea>
+              <button class="save-btn cuda-save" onclick="saveNotes('cuda')">Save Notes</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GATE -->
+      <section class="page" id="page-gate">
+        <div class="page-header">
+          <div><h2 class="page-title"><span style="color:var(--gate)">📖</span> GATE Preparation</h2><p class="page-sub">Systematic exam readiness</p></div>
+          <div class="page-pct-badge gate-badge" id="gate-pct-badge">0%</div>
+        </div>
+        <div class="progress-track big"><div class="progress-fill gate" id="gate-big-bar" style="width:0%"></div></div>
+        <div id="gate-active-timer" class="active-timer-bar hidden"></div>
+        <div class="domain-layout">
+          <div class="domain-left">
+            <div class="card">
+              <div class="card-head"><h3>Tasks</h3><span class="task-count" id="gate-task-count">0/0</span></div>
+              <div class="task-input-row">
+                <input type="text" class="task-input" id="gate-task-input" placeholder="Add a task…" maxlength="200" />
+                <button class="add-btn gate-add" onclick="addTask('gate')">+</button>
+              </div>
+              <ul class="task-list" id="gate-task-list"></ul>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Weekly Goals</h3></div>
+              <textarea class="notes-area" id="gate-goals" placeholder="Topics to cover this week…"></textarea>
+            </div>
+          </div>
+          <div class="domain-right">
+            <div class="card">
+              <div class="card-head"><h3>What I did today</h3></div>
+              <textarea class="notes-area" id="gate-today" placeholder="Subjects studied, problems solved…"></textarea>
+              <button class="save-btn gate-save" onclick="saveToday('gate')">Save Entry</button>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Notes</h3></div>
+              <textarea class="notes-area tall" id="gate-notes" placeholder="Formulas, concepts, weak areas…"></textarea>
+              <button class="save-btn gate-save" onclick="saveNotes('gate')">Save Notes</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DAILY LOG -->
+      <section class="page" id="page-daily">
+        <div class="page-header">
+          <div><h2 class="page-title">Daily Log</h2><p class="page-sub">Every day counts.</p></div>
+        </div>
+        <div class="card daily-entry-card">
+          <h3>Log Today's Work</h3>
+          <div class="daily-tag-row">
+            <button class="tag-btn active" data-tag="vlsi">⚡ VLSI</button>
+            <button class="tag-btn" data-tag="cuda">🖥 CUDA</button>
+            <button class="tag-btn" data-tag="gate">📖 GATE</button>
+            <button class="tag-btn" data-tag="general">✦ General</button>
+          </div>
+          <textarea class="notes-area" id="daily-entry-text" placeholder="What did you work on? What did you learn? Tomorrow's focus?"></textarea>
+          <div class="daily-meta-row">
+            <select id="daily-hours" class="hours-select">
+              <option value="0.5">30 min</option><option value="1">1 hour</option>
+              <option value="1.5">1.5 hours</option><option value="2" selected>2 hours</option>
+              <option value="3">3 hours</option><option value="4">4 hours</option><option value="5">5+ hours</option>
+            </select>
+            <button class="save-btn" onclick="saveDailyLog()">Save Log</button>
+          </div>
+        </div>
+        <div class="logs-history">
+          <h3 class="section-title">History</h3>
+          <div id="daily-log-list"></div>
+        </div>
+      </section>
+
+      <!-- ANALYTICS -->
+      <section class="page" id="page-analytics">
+        <div class="page-header">
+          <div><h2 class="page-title">Analytics</h2><p class="page-sub">Your focus, visualized.</p></div>
+          <div class="header-actions">
+            <button class="action-btn" id="btn-export-pdf">📄 Export PDF</button>
+            <button class="action-btn report-btn" id="btn-weekly-report">📊 Weekly Report</button>
+            <button class="action-btn report-btn" id="btn-monthly-report">📅 Monthly Report</button>
+            <button class="action-btn" id="btn-export-json">💾 Backup JSON</button>
+            <button class="action-btn import-btn" id="btn-import-json">📂 Restore</button>
+          </div>
+        </div>
+        <input type="file" id="import-file-input" accept=".json" style="display:none" />
+
+        <div class="analytics-grid">
+          <div class="chart-card span2">
+            <h3 class="chart-title">Daily Focus Hours — Last 14 Days</h3>
+            <canvas id="chart-daily-focus" height="100"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">Time Split by Domain</h3>
+            <canvas id="chart-domain-pie" height="220"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">Task Completion by Domain</h3>
+            <canvas id="chart-tasks-bar" height="220"></canvas>
+          </div>
+          <div class="chart-card span2">
+            <h3 class="chart-title">Cumulative Focus Hours — All Time</h3>
+            <canvas id="chart-cumulative" height="90"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">Weekly Goal</h3>
+            <div class="goal-ring-wrap">
+              <canvas id="chart-weekly-goal" width="160" height="160"></canvas>
+              <div class="goal-ring-center">
+                <span id="goal-ring-val">0h</span>
+                <small id="goal-ring-label">of <span id="goal-ring-target">10</span>h goal</small>
+              </div>
+            </div>
+            <div class="goal-input-row">
+              <input type="number" id="weekly-goal-input" class="time-input" min="1" max="100" placeholder="Weekly goal (hrs)" style="width:100%;font-size:13px;padding:7px 10px;" />
+              <button class="save-btn" onclick="saveWeeklyGoal()" style="align-self:auto;white-space:nowrap;">Set Goal</button>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">Activity Heatmap — Last 12 Weeks</h3>
+            <div id="heatmap-container" class="heatmap-container"></div>
+            <div class="heatmap-legend"><span style="color:var(--text3);font-size:11px">Less</span><div class="heatmap-legend-boxes"></div><span style="color:var(--text3);font-size:11px">More</span></div>
+          </div>
+        </div>
+
+        <div class="time-breakdown-section">
+          <h3 class="section-title">Task Time Log</h3>
+          <div id="time-breakdown-list"></div>
+        </div>
+
+        <div class="card reminder-card">
+          <div class="card-head"><h3>⏰ Daily Backup Reminder</h3></div>
+          <p class="reminder-desc">Focus OS will remind you to export your data at this time every day.</p>
+          <div class="reminder-row">
+            <input type="time" id="reminder-time" class="time-input" value="21:00" />
+            <button class="save-btn" onclick="saveReminderTime()">Set Reminder</button>
+            <button class="cancel-btn" onclick="clearReminder()">Clear</button>
+          </div>
+          <p class="reminder-status" id="reminder-status"></p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Task Complete Modal -->
+  <div id="task-end-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 class="modal-title">Complete Task ✓</h3>
+      <p class="modal-task-name" id="modal-task-name"></p>
+      <div class="modal-stats-row" id="modal-time-stats"></div>
+      <div class="modal-field">
+        <label>What did you accomplish?</label>
+        <textarea class="notes-area" id="modal-notes" placeholder="Brief summary of what you did…" rows="3"></textarea>
+      </div>
+      <div class="modal-field">
+        <label>Break time taken</label>
+        <select class="hours-select" id="modal-break">
+          <option value="0">No breaks</option>
+          <option value="5">~5 min</option>
+          <option value="10">~10 min</option>
+          <option value="15">~15 min</option>
+          <option value="20">~20 min</option>
+          <option value="30">~30 min</option>
+          <option value="45">~45 min</option>
+          <option value="60">1 hour+</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="save-btn" onclick="confirmTaskEnd()">Mark Complete</button>
+        <button class="cancel-btn" onclick="closeTaskModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reminder Popup -->
+  <div id="reminder-popup" class="reminder-popup hidden">
+    <div class="reminder-popup-inner">
+      <span style="font-size:24px">⏰</span>
+      <div>
+        <p style="font-weight:500;margin-bottom:4px">Time to backup your data!</p>
+        <p style="font-size:12px;color:var(--text3)">Keep your Focus OS data safe.</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="exportJSON();closeReminder()" class="save-btn" style="font-size:12px;padding:7px 14px">Backup Now</button>
+        <button onclick="closeReminder()" class="cancel-btn" style="font-size:12px;padding:7px 14px">Later</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Data Modal for Reports -->
+  <div id="upload-report-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:520px;">
+      <h3 class="modal-title" id="upload-modal-title">Weekly Report</h3>
+      <p style="font-size:13px;color:var(--text3);margin-top:-8px;">No data found for this period. You can upload a JSON backup to generate the report, or export with current data only.</p>
+      <div class="upload-drop-zone" id="upload-drop-zone">
+        <div class="upload-drop-inner">
+          <span style="font-size:32px">📂</span>
+          <p style="font-size:14px;color:var(--text2);margin-top:8px;">Drop your <code>focusos-backup-*.json</code> here</p>
+          <p style="font-size:12px;color:var(--text3);margin-top:4px;">or click to browse</p>
+          <input type="file" id="upload-report-file" accept=".json" style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);text-align:center;" id="upload-file-name">No file selected</p>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button class="cancel-btn" onclick="closeUploadModal()">Cancel</button>
+        <div style="display:flex;gap:8px;">
+          <button class="save-btn" style="color:var(--text2);" onclick="generateReportWithUpload()">Generate with uploaded data</button>
+          <button class="save-btn" onclick="generateReportCurrentData()">Use current data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
