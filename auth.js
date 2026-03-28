@@ -59,7 +59,7 @@ const Auth = (() => {
   return{setPassword,attempt,logout,isAuthenticated};
 })();
 
-(function initAuthUI(){
+document.addEventListener('DOMContentLoaded', function() {
   const lockScreen=document.getElementById('lock-screen');
   const app=document.getElementById('app');
   const input=document.getElementById('pw-input');
@@ -69,7 +69,7 @@ const Auth = (() => {
   const timerEl=document.getElementById('lockout-timer');
   const toggle=document.getElementById('pw-toggle');
 
-  // Always show lock screen on load, never auto-authenticate
+  // Always show lock screen on load
   lockScreen.classList.remove('hidden');
   app.classList.add('hidden');
 
@@ -98,13 +98,8 @@ const Auth = (() => {
     const iv=setInterval(()=>{secs--;timerEl.textContent=secs;if(secs<=0){clearInterval(iv);lockoutMsg.classList.add('hidden');}},1000);
   }
   function showApp(){
-  lockScreen.classList.add('hidden');
-  app.classList.remove('hidden');
-  setTimeout(() => {
+    lockScreen.classList.add('hidden');
+    app.classList.remove('hidden');
     if(typeof initApp==='function') initApp();
-  }, 150);
-}
-  window.addEventListener('beforeunload', () => {
-    Auth.logout();
-  });
-})();
+  }
+});
