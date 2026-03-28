@@ -3,6 +3,13 @@
 /* ════════════════════════════════════════════
    STORE — safe localStorage wrapper
 ════════════════════════════════════════════ */
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return { title: "Good morning.", sub: "Let's build something great." };
+  if (h < 17) return { title: "Good afternoon.", sub: "Stay in the zone." };
+  if (h < 21) return { title: "Good evening.", sub: "One more push." };
+  return { title: "Still at it?", sub: "Rest is part of the process." };
+}
 const Store = {
   esc(v) {
     return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
