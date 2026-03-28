@@ -69,7 +69,22 @@ document.addEventListener('DOMContentLoaded', function() {
   const timerEl=document.getElementById('lockout-timer');
   const toggle=document.getElementById('pw-toggle');
 
-  // Always show lock screen on load
+  function showApp(){
+    lockScreen.classList.add('hidden');
+    app.classList.remove('hidden');
+    requestAnimationFrame(()=>{
+      setTimeout(()=>{
+        if(typeof initApp==='function') initApp();
+      }, 100);
+    });
+  }
+
+  // If already authenticated, skip lock screen
+  if(Auth.isAuthenticated()){
+    showApp();
+    return;
+  }
+
   lockScreen.classList.remove('hidden');
   app.classList.add('hidden');
 
@@ -96,12 +111,5 @@ document.addEventListener('DOMContentLoaded', function() {
   function showLockout(secs){
     lockoutMsg.classList.remove('hidden');timerEl.textContent=secs;alertEl.classList.add('hidden');
     const iv=setInterval(()=>{secs--;timerEl.textContent=secs;if(secs<=0){clearInterval(iv);lockoutMsg.classList.add('hidden');}},1000);
-  }
-  function showApp(){
-    lockScreen.classList.add('hidden');
-    app.classList.remove('hidden');
-    setTimeout(() => {
-      if(typeof initApp==='function') initApp();
-    }, 200);
   }
 });
