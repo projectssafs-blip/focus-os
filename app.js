@@ -72,20 +72,24 @@ let pendingComplete = null; // {domain, idx} waiting for modal
    INIT
 ════════════════════════════════════════════ */
 function initApp() {
-  renderQuote();
-  renderDate();
-  initNav();
-  DOMAINS.forEach(d => { loadTasks(d); loadNotes(d); loadGoals(d); });
-  renderDashboard();
-  renderDailyLog();
-  initTagButtons();
-  initAutoSave();
-  initExportButtons();
-  initImport();
-  initReminderCheck();
-  initUploadModal();
-  updateStreak();
-  restoreActiveTimer();
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      try { renderQuote(); } catch(e) {}
+      try { renderDate(); } catch(e) {}
+      try { initNav(); } catch(e) {}
+      try { DOMAINS.forEach(d => { loadTasks(d); loadNotes(d); loadGoals(d); }); } catch(e) {}
+      try { renderDashboard(); } catch(e) {}
+      try { renderDailyLog(); } catch(e) {}
+      try { initTagButtons(); } catch(e) {}
+      try { initAutoSave(); } catch(e) {}
+      try { initExportButtons(); } catch(e) {}
+      try { initImport(); } catch(e) {}
+      try { initReminderCheck(); } catch(e) {}
+      try { initUploadModal(); } catch(e) {}
+      try { updateStreak(); } catch(e) {}
+      try { restoreActiveTimer(); } catch(e) {}
+    }, 80);
+  });
 }
 
 /* ════════════════════════════════════════════
