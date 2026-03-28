@@ -101,4 +101,7 @@ const Auth = (() => {
     // Wait for all scripts to load before calling initApp
     if(typeof initApp==='function') initApp();
   }
+  window.addEventListener('beforeunload', () => {
+    Auth.logout();
+  });
 })();
