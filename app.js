@@ -297,16 +297,21 @@ function stopTimer() {
 
 function restoreActiveTimer() {
   const saved=Store.get('active_task',null);
-  if(saved&&saved.startTime) {
-    activeTask=saved;
+  if(saved&&saved.startTime&&saved.domain&&saved.idx!=null) {
     const tasks=getTasks(saved.domain);
     if(tasks[saved.idx]&&!tasks[saved.idx].done) {
+      activeTask=saved;
       startTimerUI(saved.domain,saved.idx);
       renderTasks(saved.domain,tasks);
     } else {
       Store.set('active_task',null);
       activeTask=null;
+      // Re-render all domains so Start buttons appear correctly
+      DOMAINS.forEach(d=>renderTasks(d,getTasks(d)));
     }
+  } else {
+    Store.set('active_task',null);
+    activeTask=null;
   }
 }
 
