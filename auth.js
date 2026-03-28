@@ -100,6 +100,8 @@ document.addEventListener('DOMContentLoaded', function() {
   function showApp(){
     lockScreen.classList.add('hidden');
     app.classList.remove('hidden');
-    if(typeof initApp==='function') initApp();
+    setTimeout(() => {
+      if(typeof initApp==='function') initApp();
+    }, 200);
   }
 });
