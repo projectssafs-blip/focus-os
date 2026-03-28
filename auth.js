@@ -98,6 +98,11 @@ const Auth = (() => {
   function showApp(){
     lockScreen.classList.add('hidden');
     app.classList.remove('hidden');
-    if(typeof initApp==='function') initApp();
+    // Wait for all scripts to load before calling initApp
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',()=>{if(typeof initApp==='function') initApp();});
+    } else {
+      if(typeof initApp==='function') initApp();
+    }
   }
 })();
