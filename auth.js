@@ -69,7 +69,9 @@ const Auth = (() => {
   const timerEl=document.getElementById('lockout-timer');
   const toggle=document.getElementById('pw-toggle');
 
-  if(Auth.isAuthenticated()){showApp();return;}
+  // Always show lock screen on load, never auto-authenticate
+  lockScreen.classList.remove('hidden');
+  app.classList.add('hidden');
 
   toggle.addEventListener('click',()=>{
     input.type=input.type==='password'?'text':'password';
@@ -98,7 +100,6 @@ const Auth = (() => {
   function showApp(){
     lockScreen.classList.add('hidden');
     app.classList.remove('hidden');
-    // Wait for all scripts to load before calling initApp
     if(typeof initApp==='function') initApp();
   }
   window.addEventListener('beforeunload', () => {
