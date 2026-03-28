@@ -3,13 +3,6 @@
 /* ════════════════════════════════════════════
    STORE — safe localStorage wrapper
 ════════════════════════════════════════════ */
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return { title: "Good morning.", sub: "Let's build something great." };
-  if (h < 17) return { title: "Good afternoon.", sub: "Stay in the zone." };
-  if (h < 21) return { title: "Good evening.", sub: "One more push." };
-  return { title: "Still at it?", sub: "Rest is part of the process." };
-}
 const Store = {
   esc(v) {
     return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
@@ -72,24 +65,20 @@ let pendingComplete = null; // {domain, idx} waiting for modal
    INIT
 ════════════════════════════════════════════ */
 function initApp() {
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      try { renderQuote(); } catch(e) {}
-      try { renderDate(); } catch(e) {}
-      try { initNav(); } catch(e) {}
-      try { DOMAINS.forEach(d => { loadTasks(d); loadNotes(d); loadGoals(d); }); } catch(e) {}
-      try { renderDashboard(); } catch(e) {}
-      try { renderDailyLog(); } catch(e) {}
-      try { initTagButtons(); } catch(e) {}
-      try { initAutoSave(); } catch(e) {}
-      try { initExportButtons(); } catch(e) {}
-      try { initImport(); } catch(e) {}
-      try { initReminderCheck(); } catch(e) {}
-      try { initUploadModal(); } catch(e) {}
-      try { updateStreak(); } catch(e) {}
-      try { restoreActiveTimer(); } catch(e) {}
-    }, 80);
-  });
+  renderQuote();
+  renderDate();
+  initNav();
+  DOMAINS.forEach(d => { loadTasks(d); loadNotes(d); loadGoals(d); loadDrafts(d); });
+  renderDashboard();
+  renderDailyLog();
+  initTagButtons();
+  initAutoSave();
+  initExportButtons();
+  initImport();
+  initReminderCheck();
+  initUploadModal();
+  updateStreak();
+  restoreActiveTimer();
 }
 
 /* ════════════════════════════════════════════
@@ -308,21 +297,16 @@ function stopTimer() {
 
 function restoreActiveTimer() {
   const saved=Store.get('active_task',null);
-  if(saved&&saved.startTime&&saved.domain&&saved.idx!=null) {
+  if(saved&&saved.startTime) {
+    activeTask=saved;
     const tasks=getTasks(saved.domain);
     if(tasks[saved.idx]&&!tasks[saved.idx].done) {
-      activeTask=saved;
       startTimerUI(saved.domain,saved.idx);
       renderTasks(saved.domain,tasks);
     } else {
       Store.set('active_task',null);
       activeTask=null;
-      // Re-render all domains so Start buttons appear correctly
-      DOMAINS.forEach(d=>renderTasks(d,getTasks(d)));
     }
-  } else {
-    Store.set('active_task',null);
-    activeTask=null;
   }
 }
 
@@ -415,13 +399,26 @@ function saveToday(domain){
   const logs=Store.get('today_'+domain,[]);
   logs.unshift({text:el.value.trim(),date:new Date().toLocaleDateString('en-IN'),ts:Date.now()});
   Store.set('today_'+domain,logs.slice(0,30));
+  Store.set('draft_today_'+domain,'');
   el.value=''; showToast('Entry saved ✓'); updateStreak(); renderDashboard();
 }
 function initAutoSave(){
   DOMAINS.forEach(d=>{
     document.getElementById(d+'-notes')?.addEventListener('input',debounce(()=>Store.set('notes_'+d,document.getElementById(d+'-notes').value),1000));
     document.getElementById(d+'-goals')?.addEventListener('input',debounce(()=>Store.set('goals_'+d,document.getElementById(d+'-goals').value),1000));
+    document.getElementById(d+'-today')?.addEventListener('input',debounce(()=>Store.set('draft_today_'+d,document.getElementById(d+'-today').value),500));
+    document.getElementById(d+'-task-input')?.addEventListener('input',debounce(()=>Store.set('draft_task_'+d,document.getElementById(d+'-task-input').value),500));
   });
+  document.getElementById('daily-entry-text')?.addEventListener('input',debounce(()=>Store.set('draft_daily',document.getElementById('daily-entry-text').value),500));
+}
+
+function loadDrafts(domain){
+  const today=document.getElementById(domain+'-today');
+  const taskInput=document.getElementById(domain+'-task-input');
+  if(today) today.value=Store.get('draft_today_'+domain,'');
+  if(taskInput) taskInput.value=Store.get('draft_task_'+domain,'');
+  const daily=document.getElementById('daily-entry-text');
+  if(daily) daily.value=Store.get('draft_daily','');
 }
 
 /* ════════════════════════════════════════════
@@ -443,6 +440,7 @@ function saveDailyLog(){
   const logs=Store.get('daily_logs',[]);
   logs.unshift({text:el.value.trim(),tag:selectedTag,hours:parseFloat(hrs?.value||1),date:new Date().toLocaleDateString('en-IN'),ts:Date.now()});
   Store.set('daily_logs',logs.slice(0,365));
+  Store.set('draft_daily','');
   el.value=''; showToast('Log saved ✓'); renderDailyLog(); updateStreak(); renderDashboard();
 }
 function renderDailyLog(){
