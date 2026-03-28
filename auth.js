@@ -98,10 +98,12 @@ const Auth = (() => {
     const iv=setInterval(()=>{secs--;timerEl.textContent=secs;if(secs<=0){clearInterval(iv);lockoutMsg.classList.add('hidden');}},1000);
   }
   function showApp(){
-    lockScreen.classList.add('hidden');
-    app.classList.remove('hidden');
+  lockScreen.classList.add('hidden');
+  app.classList.remove('hidden');
+  setTimeout(() => {
     if(typeof initApp==='function') initApp();
-  }
+  }, 150);
+}
   window.addEventListener('beforeunload', () => {
     Auth.logout();
   });
