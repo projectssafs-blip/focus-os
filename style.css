@@ -310,7 +310,214 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   .modal-stats-row{flex-direction:column;}
 }
 
-/* ── SECTION MANAGER ─────────────────────────────── */
-.manage-btn { color: var(--text2); }
-.manage-btn:hover { color: var(--accent); }
-.sm-add-form { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
+
+/* ════════════════════════════════════════════════════
+   ANDROID / MOBILE OPTIMIZATIONS
+════════════════════════════════════════════════════ */
+
+/* ── Global touch improvements ── */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* prevents 300ms delay on double-tap */
+}
+html {
+  /* allow safe-area padding for notch/home-bar */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: 0; /* reset — handled per-element */
+}
+
+/* ── Sidebar overlay (tap-outside-to-close backdrop) ── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.sidebar-overlay.active { display: block; }
+
+/* ── Bottom Nav ── */
+.bottom-nav {
+  display: none; /* hidden on desktop */
+}
+.bnav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  letter-spacing: .03em;
+  cursor: pointer;
+  padding: 10px 4px;
+  min-height: 56px;
+  transition: color var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.bnav-btn svg { flex-shrink: 0; stroke-width: 1.8; }
+.bnav-btn.active { color: var(--accent); }
+.bnav-btn:active { opacity: .7; }
+
+/* ── RESPONSIVE — Mobile (<= 900px) ── */
+@media (max-width: 900px) {
+  /* sidebar becomes a slide-over drawer above the overlay */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    /* respect notch */
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  /* topbar — respect status-bar height */
+  .topbar {
+    display: flex;
+    padding-top: max(14px, env(safe-area-inset-top));
+    position: sticky;
+    top: 0;
+  }
+
+  /* main content — pad bottom so content clears bottom nav */
+  .main-content {
+    padding: 20px 16px 90px;
+    /* leave room above bottom nav + home indicator */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
+  /* bottom nav — visible on mobile */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    z-index: 150;
+    /* home-bar safe area */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* grid adjustments */
+  .stats-row { grid-template-columns: repeat(2,1fr); gap: 12px; }
+  .domain-grid { grid-template-columns: 1fr; gap: 12px; }
+  .domain-layout { grid-template-columns: 1fr; }
+  .analytics-grid { grid-template-columns: 1fr; }
+  .chart-card.span2 { grid-column: auto; }
+  .app { flex-direction: column; }
+
+  /* reminder popup — above bottom nav */
+  .reminder-popup { bottom: calc(72px + env(safe-area-inset-bottom) + 12px); right: 16px; }
+
+  /* toast — above bottom nav */
+  .toast { bottom: calc(72px + env(safe-area-inset-bottom) + 12px); right: 16px; left: 16px; right: 16px; text-align: center; }
+}
+
+/* ── RESPONSIVE — Small phones (<= 480px) ── */
+@media (max-width: 480px) {
+  /* lock screen */
+  .lock-card { padding: 32px 20px; margin: 16px; }
+  /* inputs — 16px prevents iOS/Android auto-zoom */
+  .pw-wrapper input,
+  .task-input,
+  .notes-area,
+  .hours-select,
+  .time-input {
+    font-size: 16px !important;
+  }
+
+  /* larger touch targets for task actions */
+  .task-del,
+  .task-action-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+  }
+
+  /* checkboxes — bigger tap target */
+  .task-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  /* nav buttons in sidebar */
+  .nav-btn { min-height: 48px; font-size: 15px; }
+
+  /* unlock button — full touch target */
+  .unlock-btn { min-height: 52px; font-size: 16px; }
+
+  /* modal — full-width bottom sheet style */
+  .modal-overlay { align-items: flex-end; }
+  .modal-card {
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    padding: 28px 20px;
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+    max-width: 100%;
+    width: 100%;
+  }
+  .modal-stats-row { flex-direction: column; }
+
+  /* tag buttons — wrap nicely */
+  .daily-tag-row { gap: 8px; }
+  .tag-btn { padding: 8px 14px; font-size: 13px; min-height: 40px; }
+
+  /* page header — stack vertically */
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .page-title { font-size: 22px; }
+
+  /* domain card — tighter */
+  .domain-card { padding: 16px; }
+
+  /* stat cards */
+  .stat-card { padding: 16px 12px; }
+  .stat-val { font-size: 24px; }
+
+  /* header actions wrap */
+  .header-actions { width: 100%; }
+  .action-btn { flex: 1; text-align: center; font-size: 12px; padding: 8px 10px; }
+
+  /* analytics section label */
+  .section-title { font-size: 14px; }
+
+  /* heatmap — scrollable, bigger cells on phone */
+  .heatmap-cell { width: 14px; height: 14px; }
+
+  /* lock hint — hide on very small screens */
+  .lock-hint { display: none; }
+}
+
+/* ── Active state feedback (Android ripple substitute) ── */
+.nav-btn:active,
+.save-btn:active,
+.cancel-btn:active,
+.add-btn:active,
+.action-btn:active,
+.export-side-btn:active,
+.unlock-btn:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+  transition: transform 0.08s, opacity 0.08s;
+}
+
+/* ── Smooth scrolling with momentum on Android ── */
+.main-content,
+.task-list,
+#daily-log-list {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}

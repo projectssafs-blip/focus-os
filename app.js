@@ -243,13 +243,36 @@ function initNav() {
   });
   document.getElementById('menu-toggle')?.addEventListener('click', () => {
     document.getElementById('sidebar')?.classList.toggle('open');
+    document.getElementById('sidebar-overlay')?.classList.toggle('active');
   });
+  // overlay tap closes sidebar
+  document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
   document.addEventListener('click', e => {
     const sb=document.getElementById('sidebar');
     const mt=document.getElementById('menu-toggle');
     if(sb?.classList.contains('open')&&!sb.contains(e.target)&&e.target!==mt) closeSidebar();
   });
   document.getElementById('logout-btn')?.addEventListener('click', () => { Auth.logout(); location.reload(); });
+
+  // ── Bottom Nav (Android) ──
+  document.querySelectorAll('.bnav-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      haptic();
+      navigateTo(btn.dataset.page);
+    });
+  });
+  // "Domains" button opens sidebar on mobile
+  document.getElementById('bnav-domains-btn')?.addEventListener('click', () => {
+    haptic();
+    document.getElementById('sidebar')?.classList.toggle('open');
+    document.getElementById('sidebar-overlay')?.classList.toggle('active');
+  });
+  // "More" button also opens sidebar
+  document.getElementById('bnav-menu-btn')?.addEventListener('click', () => {
+    haptic();
+    document.getElementById('sidebar')?.classList.toggle('open');
+    document.getElementById('sidebar-overlay')?.classList.toggle('active');
+  });
 }
 function navigateTo(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -263,8 +286,32 @@ function navigateTo(page) {
   if(tp) tp.textContent = btn ? btn.textContent.trim() : page;
   if(page==='dashboard') renderDashboard();
   if(page==='analytics') { setTimeout(renderCharts,100); renderTimeBreakdown(); }
+  syncBottomNav(page);
+  // scroll main content to top on page change
+  document.querySelector('.main-content')?.scrollTo({top:0, behavior:'instant'});
 }
-function closeSidebar() { document.getElementById('sidebar')?.classList.remove('open'); }
+function closeSidebar() {
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('active');
+}
+
+/* ── Haptic feedback (Android vibration API) ── */
+function haptic(ms=8) {
+  try { if(navigator.vibrate) navigator.vibrate(ms); } catch{}
+}
+
+/* ── Sync bottom nav active state ── */
+function syncBottomNav(page) {
+  const staticPages = ['dashboard','daily','analytics'];
+  document.querySelectorAll('.bnav-btn[data-page]').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === page);
+  });
+  // highlight "Domains" btn when on a domain page
+  const domainsBtn = document.getElementById('bnav-domains-btn');
+  if(domainsBtn) {
+    domainsBtn.classList.toggle('active', !staticPages.includes(page) && page !== 'dashboard');
+  }
+}
 
 /* ════════════════════════════════════════════
    TASKS
