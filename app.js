@@ -242,36 +242,33 @@ function initNav() {
     btn.addEventListener('click', () => { navigateTo(btn.dataset.page); closeSidebar(); });
   });
   document.getElementById('menu-toggle')?.addEventListener('click', () => {
-    document.getElementById('sidebar')?.classList.toggle('open');
-    document.getElementById('sidebar-overlay')?.classList.toggle('active');
+    toggleSidebar();
   });
   // overlay tap closes sidebar
   document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
-  document.addEventListener('click', e => {
-    const sb=document.getElementById('sidebar');
-    const mt=document.getElementById('menu-toggle');
-    if(sb?.classList.contains('open')&&!sb.contains(e.target)&&e.target!==mt) closeSidebar();
-  });
   document.getElementById('logout-btn')?.addEventListener('click', () => { Auth.logout(); location.reload(); });
 
-  // ── Bottom Nav (Android) ──
+  // ── Bottom Nav ──
   document.querySelectorAll('.bnav-btn[data-page]').forEach(btn => {
     btn.addEventListener('click', () => {
       haptic();
       navigateTo(btn.dataset.page);
     });
   });
-  // "Domains" button opens sidebar on mobile
+  // "Domains" → navigate to first domain, or open sidebar if no domains
   document.getElementById('bnav-domains-btn')?.addEventListener('click', () => {
     haptic();
-    document.getElementById('sidebar')?.classList.toggle('open');
-    document.getElementById('sidebar-overlay')?.classList.toggle('active');
+    const domains = getDomains();
+    if(domains.length) {
+      navigateTo(domains[0].id);
+    } else {
+      toggleSidebar();
+    }
   });
-  // "More" button also opens sidebar
+  // "More" → opens sidebar (has backup, manage sections, lock, etc.)
   document.getElementById('bnav-menu-btn')?.addEventListener('click', () => {
     haptic();
-    document.getElementById('sidebar')?.classList.toggle('open');
-    document.getElementById('sidebar-overlay')?.classList.toggle('active');
+    toggleSidebar();
   });
 }
 function navigateTo(page) {
@@ -290,6 +287,15 @@ function navigateTo(page) {
   // scroll main content to top on page change
   document.querySelector('.main-content')?.scrollTo({top:0, behavior:'instant'});
 }
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  const isOpen = sb?.classList.contains('open');
+  if(isOpen) { closeSidebar(); } else {
+    sb?.classList.add('open');
+    ov?.classList.add('active');
+  }
+}
 function closeSidebar() {
   document.getElementById('sidebar')?.classList.remove('open');
   document.getElementById('sidebar-overlay')?.classList.remove('active');
@@ -303,14 +309,14 @@ function haptic(ms=8) {
 /* ── Sync bottom nav active state ── */
 function syncBottomNav(page) {
   const staticPages = ['dashboard','daily','analytics'];
+  const isDomainPage = !staticPages.includes(page);
   document.querySelectorAll('.bnav-btn[data-page]').forEach(b => {
     b.classList.toggle('active', b.dataset.page === page);
   });
-  // highlight "Domains" btn when on a domain page
   const domainsBtn = document.getElementById('bnav-domains-btn');
-  if(domainsBtn) {
-    domainsBtn.classList.toggle('active', !staticPages.includes(page) && page !== 'dashboard');
-  }
+  if(domainsBtn) domainsBtn.classList.toggle('active', isDomainPage);
+  const menuBtn = document.getElementById('bnav-menu-btn');
+  if(menuBtn) menuBtn.classList.remove('active');
 }
 
 /* ════════════════════════════════════════════
@@ -354,7 +360,7 @@ function renderTasks(domain, tasks) {
         const stopBtn=document.createElement('button');
         stopBtn.className='task-action-btn stop-btn';
         stopBtn.textContent='■ Stop';
-        stopBtn.addEventListener('click',()=>openTaskEndModal(domain,idx));
+        stopBtn.addEventListener('click',()=>{ haptic(12); openTaskEndModal(domain,idx); });
         actions.appendChild(stopBtn);
       } else if(!activeTask) {
         const startBtn=document.createElement('button');
@@ -363,7 +369,7 @@ function renderTasks(domain, tasks) {
         startBtn.style.color = d.color;
         startBtn.style.borderColor = hexToRgba(d.color,.3);
         startBtn.style.background = hexToRgba(d.color,.08);
-        startBtn.addEventListener('click',()=>startTask(domain,idx));
+        startBtn.addEventListener('click',()=>{ haptic(8); startTask(domain,idx); });
         actions.appendChild(startBtn);
       }
     }
@@ -371,7 +377,7 @@ function renderTasks(domain, tasks) {
     const del=document.createElement('button');
     del.className='task-del'; del.textContent='×';
     del.setAttribute('aria-label','Delete');
-    del.addEventListener('click',()=>deleteTask(domain,idx));
+    del.addEventListener('click',()=>{ haptic(15); deleteTask(domain,idx); });
     actions.appendChild(del);
 
     cb.addEventListener('change',()=>{
@@ -882,3 +888,5 @@ window.promptDeleteSection=promptDeleteSection;
 window.cancelDeleteSection=cancelDeleteSection;
 window.confirmDeleteSection=confirmDeleteSection;
 window.closeSectionManager=closeSectionManager;
+window.toggleSidebar=toggleSidebar;
+window.closeSidebar=closeSidebar;

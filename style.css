@@ -290,234 +290,210 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 /* ── UTIL ────────────────────────────────────── */
 .hidden{display:none!important;}
 
-/* ── RESPONSIVE ──────────────────────────────── */
-@media(max-width:900px){
-  .sidebar{position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%);transition:transform .25s ease;}
-  .sidebar.open{transform:translateX(0);}
-  .topbar{display:flex;}
-  .main-content{padding:20px 20px 40px;}
-  .stats-row{grid-template-columns:repeat(2,1fr);}
-  .domain-grid{grid-template-columns:1fr;}
-  .domain-layout{grid-template-columns:1fr;}
-  .analytics-grid{grid-template-columns:1fr;}
-  .chart-card.span2{grid-column:auto;}
-  .app{flex-direction:column;}
-}
-@media(max-width:480px){
-  .lock-card{padding:32px 20px;margin:16px;}
-  .main-content{padding:16px 16px 40px;}
-  .modal-card{margin:16px;padding:24px;}
-  .modal-stats-row{flex-direction:column;}
-}
-
-
 /* ════════════════════════════════════════════════════
-   ANDROID / MOBILE OPTIMIZATIONS
+   MOBILE & ANDROID — Complete Responsive Layer
 ════════════════════════════════════════════════════ */
 
-/* ── Global touch improvements ── */
-* {
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation; /* prevents 300ms delay on double-tap */
-}
-html {
-  /* allow safe-area padding for notch/home-bar */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  padding: 0; /* reset — handled per-element */
+/* ── Touch: only kill tap highlight + delay on interactive elements.
+      Do NOT put touch-action on * — it breaks scroll inside lists ── */
+button, a, input, select, textarea, label { -webkit-tap-highlight-color: transparent; }
+button, a, label, [role="button"] { touch-action: manipulation; }
+
+/* ── Momentum scrolling on scrollable containers ── */
+.main-content, .task-list, #daily-log-list, .sidebar-nav {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
-/* ── Sidebar overlay (tap-outside-to-close backdrop) ── */
+/* ── Press feedback — all interactive elements ── */
+.nav-btn:active, .save-btn:active, .cancel-btn:active, .add-btn:active,
+.action-btn:active, .export-side-btn:active, .unlock-btn:active,
+.task-action-btn:active, .bnav-btn:active, .tag-btn:active {
+  transform: scale(0.95);
+  opacity: 0.80;
+  transition: transform 0.07s ease, opacity 0.07s ease;
+}
+
+/* ── Sidebar overlay (tap-outside backdrop) ── */
 .sidebar-overlay {
   display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.55);
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
   z-index: 99;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 .sidebar-overlay.active { display: block; }
 
-/* ── Bottom Nav ── */
-.bottom-nav {
-  display: none; /* hidden on desktop */
-}
+/* ── Bottom Nav — hidden on desktop ── */
+.bottom-nav { display: none; }
+
 .bnav-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  flex: 1;
-  background: none;
-  border: none;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px; flex: 1;
+  background: none; border: none;
   color: var(--text3);
   font-family: 'DM Sans', sans-serif;
-  font-size: 10px;
-  letter-spacing: .03em;
+  font-size: 10px; letter-spacing: .02em;
   cursor: pointer;
-  padding: 10px 4px;
+  padding: 8px 4px;
   min-height: 56px;
-  transition: color var(--transition);
+  transition: color .15s;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
-.bnav-btn svg { flex-shrink: 0; stroke-width: 1.8; }
+.bnav-btn svg { flex-shrink: 0; }
 .bnav-btn.active { color: var(--accent); }
-.bnav-btn:active { opacity: .7; }
+.bnav-btn span.bnav-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--accent);
+  margin-top: 2px; opacity: 0;
+}
+.bnav-btn.active span.bnav-dot { opacity: 1; }
 
-/* ── RESPONSIVE — Mobile (<= 900px) ── */
+/* ════ TABLET + MOBILE (≤ 900px) ════ */
 @media (max-width: 900px) {
-  /* sidebar becomes a slide-over drawer above the overlay */
+
+  /* App shell — column so topbar stacks above main content */
+  .app { flex-direction: column; }
+
+  /* Sidebar — fixed overlay drawer, out of flow */
   .sidebar {
     position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
+    top: 0; left: 0; bottom: 0;
     z-index: 200;
+    width: min(240px, 82vw);
     transform: translateX(-100%);
-    transition: transform .25s cubic-bezier(.4,0,.2,1);
-    /* respect notch */
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    will-change: transform;
+    overflow-y: auto;
     padding-top: max(24px, env(safe-area-inset-top));
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
-  .sidebar.open { transform: translateX(0); }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 6px 0 32px rgba(0,0,0,.55);
+  }
 
-  /* topbar — respect status-bar height */
+  /* Topbar */
   .topbar {
     display: flex;
-    padding-top: max(14px, env(safe-area-inset-top));
-    position: sticky;
-    top: 0;
+    position: sticky; top: 0;
+    z-index: 50;
+    padding: max(14px, env(safe-area-inset-top)) 16px 14px;
   }
 
-  /* main content — pad bottom so content clears bottom nav */
+  /* Main content — flex:1, pad bottom for bottom nav + home bar */
   .main-content {
-    padding: 20px 16px 90px;
-    /* leave room above bottom nav + home indicator */
-    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    flex: 1;
+    min-height: 0;
+    padding: 20px 16px;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom) + 12px);
   }
 
-  /* bottom nav — visible on mobile */
+  /* Bottom Nav — fixed, visible */
   .bottom-nav {
     display: flex;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 0; left: 0; right: 0;
     background: var(--bg2);
     border-top: 1px solid var(--border);
     z-index: 150;
-    /* home-bar safe area */
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* grid adjustments */
+  /* Grids */
   .stats-row { grid-template-columns: repeat(2,1fr); gap: 12px; }
   .domain-grid { grid-template-columns: 1fr; gap: 12px; }
   .domain-layout { grid-template-columns: 1fr; }
   .analytics-grid { grid-template-columns: 1fr; }
   .chart-card.span2 { grid-column: auto; }
-  .app { flex-direction: column; }
 
-  /* reminder popup — above bottom nav */
-  .reminder-popup { bottom: calc(72px + env(safe-area-inset-bottom) + 12px); right: 16px; }
+  /* Task list — taller cap */
+  .task-list { max-height: 440px; }
 
-  /* toast — above bottom nav */
-  .toast { bottom: calc(72px + env(safe-area-inset-bottom) + 12px); right: 16px; left: 16px; right: 16px; text-align: center; }
+  /* Task items — proper touch targets */
+  .task-item { padding: 12px 12px; min-height: 52px; gap: 12px; }
+  .task-item input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; }
+  .task-action-btn { min-height: 40px; min-width: 70px; font-size: 12px; padding: 6px 12px; }
+  .task-del {
+    min-width: 36px; min-height: 36px; font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Add-task row */
+  .task-input-row { gap: 8px; }
+  .add-btn { width: 44px; height: 44px; font-size: 22px; }
+
+  /* Sidebar interactive elements — bigger tap */
+  .nav-btn { min-height: 46px; padding: 10px 12px; }
+  .export-side-btn { padding: 11px 12px; min-height: 44px; }
+  .logout-btn { min-height: 44px; }
+
+  /* Toast + reminder — above bottom nav */
+  .reminder-popup { bottom: calc(70px + env(safe-area-inset-bottom) + 12px); right: 16px; }
+  .toast {
+    bottom: calc(70px + env(safe-area-inset-bottom) + 12px);
+    left: 16px; right: 16px;
+    text-align: center;
+  }
+
+  /* Daily meta row */
+  .daily-meta-row { flex-wrap: wrap; gap: 8px; }
 }
 
-/* ── RESPONSIVE — Small phones (<= 480px) ── */
+/* ════ PHONES (≤ 480px) ════ */
 @media (max-width: 480px) {
-  /* lock screen */
+
+  /* Lock screen */
   .lock-card { padding: 32px 20px; margin: 16px; }
-  /* inputs — 16px prevents iOS/Android auto-zoom */
-  .pw-wrapper input,
-  .task-input,
-  .notes-area,
-  .hours-select,
-  .time-input {
-    font-size: 16px !important;
-  }
-
-  /* larger touch targets for task actions */
-  .task-del,
-  .task-action-btn {
-    min-width: 40px;
-    min-height: 40px;
-    padding: 8px;
-  }
-
-  /* checkboxes — bigger tap target */
-  .task-item input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-  }
-
-  /* nav buttons in sidebar */
-  .nav-btn { min-height: 48px; font-size: 15px; }
-
-  /* unlock button — full touch target */
   .unlock-btn { min-height: 52px; font-size: 16px; }
 
-  /* modal — full-width bottom sheet style */
+  /* CRITICAL: prevent auto-zoom on Android/iOS — all inputs must be ≥16px */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* Page title + header */
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .page-title { font-size: 22px; }
+  .header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+  .action-btn { flex: 1; min-width: calc(50% - 4px); text-align: center; padding: 10px 8px; font-size: 12px; }
+
+  /* Stat cards */
+  .stat-card { padding: 14px 10px; }
+  .stat-val { font-size: 22px; }
+
+  /* Cards */
+  .card { padding: 16px; gap: 12px; }
+  .domain-card { padding: 16px; }
+
+  /* Modals → bottom sheet */
   .modal-overlay { align-items: flex-end; }
   .modal-card {
     margin: 0;
     border-radius: 20px 20px 0 0;
-    padding: 28px 20px;
-    padding-bottom: max(28px, env(safe-area-inset-bottom));
-    max-width: 100%;
-    width: 100%;
+    padding: 24px 20px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    max-width: 100%; width: 100%;
   }
   .modal-stats-row { flex-direction: column; }
 
-  /* tag buttons — wrap nicely */
-  .daily-tag-row { gap: 8px; }
-  .tag-btn { padding: 8px 14px; font-size: 13px; min-height: 40px; }
+  /* Tag buttons */
+  .tag-btn { min-height: 40px; padding: 8px 14px; }
 
-  /* page header — stack vertically */
-  .page-header { flex-direction: column; align-items: flex-start; }
-  .page-title { font-size: 22px; }
+  /* Daily meta — fully stacked */
+  .daily-meta-row { flex-direction: column; align-items: stretch; }
+  .daily-meta-row .hours-select { width: 100%; }
+  .daily-meta-row .save-btn { align-self: stretch; text-align: center; min-height: 46px; }
 
-  /* domain card — tighter */
-  .domain-card { padding: 16px; }
+  /* Reminder row — stacked */
+  .reminder-row { flex-direction: column; align-items: stretch; }
+  .reminder-row .time-input, .reminder-row .save-btn, .reminder-row .cancel-btn { width: 100%; text-align: center; }
 
-  /* stat cards */
-  .stat-card { padding: 16px 12px; }
-  .stat-val { font-size: 24px; }
+  /* Heatmap */
+  .heatmap-cell { width: 13px; height: 13px; }
 
-  /* header actions wrap */
-  .header-actions { width: 100%; }
-  .action-btn { flex: 1; text-align: center; font-size: 12px; padding: 8px 10px; }
-
-  /* analytics section label */
-  .section-title { font-size: 14px; }
-
-  /* heatmap — scrollable, bigger cells on phone */
-  .heatmap-cell { width: 14px; height: 14px; }
-
-  /* lock hint — hide on very small screens */
-  .lock-hint { display: none; }
-}
-
-/* ── Active state feedback (Android ripple substitute) ── */
-.nav-btn:active,
-.save-btn:active,
-.cancel-btn:active,
-.add-btn:active,
-.action-btn:active,
-.export-side-btn:active,
-.unlock-btn:active {
-  transform: scale(0.97);
-  opacity: 0.85;
-  transition: transform 0.08s, opacity 0.08s;
-}
-
-/* ── Smooth scrolling with momentum on Android ── */
-.main-content,
-.task-list,
-#daily-log-list {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  /* Lock hint — wrap code inline */
+  .lock-hint { font-size: 10px; }
+  .lock-hint code { display: block; margin-top: 4px; word-break: break-all; }
 }
