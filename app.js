@@ -55,6 +55,37 @@ function hexToRgba(hex, alpha=1) {
 }
 
 /* ════════════════════════════════════════════
+   DATE HELPERS
+════════════════════════════════════════════ */
+function dateKey(d) {
+  return (d || new Date()).toLocaleDateString('en-IN');
+}
+function todayKey() { return dateKey(new Date()); }
+function tomorrowKey() { const d=new Date(); d.setDate(d.getDate()+1); return dateKey(d); }
+
+// per-domain: { domainId: 'YYYY...' (en-IN locale string) }
+const taskDateView = {};
+
+function getTaskDateView(domain) { return taskDateView[domain] || todayKey(); }
+function setTaskDateView(domain, dateStr) {
+  taskDateView[domain] = dateStr;
+  renderTaskDateTabs(domain);
+  renderTasks(domain, getTasks(domain));
+}
+function renderTaskDateTabs(domain) {
+  const today = todayKey(), tomorrow = tomorrowKey();
+  const current = getTaskDateView(domain);
+  const tabs = document.getElementById(domain+'-date-tabs'); if(!tabs) return;
+  tabs.querySelectorAll('.dtab').forEach(b => {
+    b.classList.toggle('dtab-active', b.dataset.d === current);
+  });
+  // update custom date input if visible
+  const picker = document.getElementById(domain+'-date-picker');
+  if(picker && current !== today && current !== tomorrow) picker.style.display='inline-block';
+  else if(picker) picker.style.display='none';
+}
+
+/* ════════════════════════════════════════════
    CONSTANTS
 ════════════════════════════════════════════ */
 const QUOTES = [
@@ -117,6 +148,12 @@ function buildDomainPages() {
         <div class="domain-left">
           <div class="card">
             <div class="card-head"><h3>Tasks</h3><span class="task-count" id="${d.id}-task-count">0/0</span></div>
+            <div class="date-tabs" id="${d.id}-date-tabs">
+              <button class="dtab dtab-active" data-d="__today__" onclick="setTaskDateView('${d.id}', todayKey())">📋 Today</button>
+              <button class="dtab" data-d="__tomorrow__" onclick="setTaskDateView('${d.id}', tomorrowKey())">🌅 Tomorrow</button>
+              <button class="dtab" data-d="__custom__" onclick="document.getElementById('${d.id}-date-picker').style.display='inline-block'">📅 Other</button>
+              <input type="date" id="${d.id}-date-picker" class="date-picker-input" style="display:none" onchange="handleCustomDate('${d.id}', this.value)" />
+            </div>
             <div class="task-input-row">
               <input type="text" class="task-input" id="${d.id}-task-input" placeholder="Add a task…" maxlength="200" />
               <button class="add-btn" style="background:${d.color}" onclick="addTask('${d.id}')">+</button>
@@ -217,6 +254,7 @@ function initApp() {
   initSectionManager();
   updateStreak();
   restoreActiveTimer();
+  initLifeReminders();
 }
 
 /* ════════════════════════════════════════════
@@ -319,6 +357,14 @@ function syncBottomNav(page) {
   if(menuBtn) menuBtn.classList.remove('active');
 }
 
+function handleCustomDate(domain, isoVal) {
+  if(!isoVal) return;
+  // convert yyyy-mm-dd → en-IN locale string
+  const [y,m,day] = isoVal.split('-');
+  const d = new Date(+y, +m-1, +day);
+  setTaskDateView(domain, dateKey(d));
+}
+
 /* ════════════════════════════════════════════
    TASKS
 ════════════════════════════════════════════ */
@@ -331,11 +377,29 @@ function renderTasks(domain, tasks) {
   const count = document.getElementById(domain+'-task-count');
   if(!list) return;
   list.innerHTML='';
-  const done=tasks.filter(t=>t.done).length;
-  if(count) count.textContent=`${done}/${tasks.length}`;
+
+  // fix tab data-d to current real date strings
+  const tabs = document.getElementById(domain+'-date-tabs');
+  if(tabs) {
+    const today=todayKey(), tomorrow=tomorrowKey();
+    const current=getTaskDateView(domain);
+    tabs.querySelectorAll('.dtab').forEach(b => {
+      if(b.dataset.d==='__today__'||b.dataset.d===today) b.dataset.d=today;
+      else if(b.dataset.d==='__tomorrow__'||b.dataset.d===tomorrow) b.dataset.d=tomorrow;
+      b.classList.toggle('dtab-active', b.dataset.d===current);
+    });
+  }
+
+  const activeDate = getTaskDateView(domain);
+  // pairs: keep original index for mutations
+  const pairs = tasks.map((t,i)=>({task:t,idx:i}))
+    .filter(({task})=>(task.taskDate||todayKey())===activeDate);
+
+  const done = pairs.filter(({task})=>task.done).length;
+  if(count) count.textContent=`${done}/${pairs.length}`;
   const d = domainById(domain);
 
-  tasks.forEach((task,idx)=>{
+  pairs.forEach(({task,idx})=>{
     const li=document.createElement('li');
     li.className='task-item'+(task.done?' done':'')+(activeTask&&activeTask.domain===domain&&activeTask.idx===idx?' active-task':'');
 
@@ -398,7 +462,7 @@ function addTask(domain) {
   const raw=input.value.trim(); if(!raw) return;
   const safe=raw.replace(/[<>"'&]/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;','&':'&amp;'}[c]));
   const tasks=getTasks(domain);
-  tasks.push({text:safe,done:false,created:Date.now(),startTime:null,endTime:null,focusMin:null,breakMin:null,notes:''});
+  tasks.push({text:safe,done:false,created:Date.now(),taskDate:getTaskDateView(domain),startTime:null,endTime:null,focusMin:null,breakMin:null,notes:''});
   setTasks(domain,tasks); renderTasks(domain,tasks);
   input.value=''; input.focus();
   showToast('Task added');
@@ -476,7 +540,12 @@ function formatTime(ts) { if(!ts) return '--'; return new Date(ts).toLocaleTimeS
 /* ════════════════════════════════════════════
    PROGRESS
 ════════════════════════════════════════════ */
-function getProgress(domain) { const t=getTasks(domain); if(!t.length) return 0; return Math.round((t.filter(x=>x.done).length/t.length)*100); }
+function getProgress(domain) {
+  const today=todayKey();
+  const t=getTasks(domain).filter(x=>(x.taskDate||today)===today);
+  if(!t.length) return 0;
+  return Math.round((t.filter(x=>x.done).length/t.length)*100);
+}
 function updateProgress(domain) {
   const pct=getProgress(domain);
   const bar=document.getElementById(domain+'-big-bar'); const badge=document.getElementById(domain+'-pct-badge');
@@ -848,6 +917,57 @@ function confirmDeleteSection() {
 }
 
 /* ════════════════════════════════════════════
+   LIFE REMINDERS — General, excluded from analytics
+════════════════════════════════════════════ */
+function getReminders() { return Store.get('life_reminders', []); }
+function setReminders(arr) { Store.set('life_reminders', arr); }
+
+function initLifeReminders() {
+  const inp = document.getElementById('reminder-item-input');
+  inp?.addEventListener('keydown', e => { if(e.key==='Enter') addReminder(); });
+  renderReminders();
+}
+
+function addReminder() {
+  const inp = document.getElementById('reminder-item-input');
+  if(!inp) return;
+  const text = inp.value.trim(); if(!text) return;
+  const reminders = getReminders();
+  reminders.unshift({ id: Date.now(), text, done: false, created: Date.now() });
+  setReminders(reminders);
+  inp.value = ''; inp.focus();
+  renderReminders();
+}
+
+function deleteReminder(id) {
+  setReminders(getReminders().filter(r => r.id !== id));
+  renderReminders();
+}
+
+function toggleReminder(id) {
+  const reminders = getReminders();
+  const r = reminders.find(r => r.id === id);
+  if(r) r.done = !r.done;
+  setReminders(reminders);
+  renderReminders();
+}
+
+function renderReminders() {
+  const list = document.getElementById('life-reminders-list'); if(!list) return;
+  const reminders = getReminders();
+  if(!reminders.length) {
+    list.innerHTML = '<p class="empty-msg">No reminders yet. Add groceries, appointments, anything!</p>';
+    return;
+  }
+  list.innerHTML = reminders.map(r => `
+    <li class="reminder-item${r.done?' reminder-done':''}">
+      <input type="checkbox" ${r.done?'checked':''} onchange="toggleReminder(${r.id})" style="accent-color:var(--accent);flex-shrink:0;" />
+      <span class="reminder-text">${Store.esc(r.text)}</span>
+      <button class="task-del" onclick="deleteReminder(${r.id})" aria-label="Delete">×</button>
+    </li>`).join('');
+}
+
+/* ════════════════════════════════════════════
    TOAST
 ════════════════════════════════════════════ */
 let toastTimeout;
@@ -866,6 +986,13 @@ function debounce(fn,delay){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()
 document.addEventListener('contextmenu',e=>e.preventDefault());
 if(window.self!==window.top){document.body.innerHTML='<p style="color:red;padding:2rem;font-family:monospace">Access denied.</p>';}
 
+window.todayKey=todayKey;
+window.tomorrowKey=tomorrowKey;
+window.setTaskDateView=setTaskDateView;
+window.handleCustomDate=handleCustomDate;
+window.addReminder=addReminder;
+window.deleteReminder=deleteReminder;
+window.toggleReminder=toggleReminder;
 window.initApp=initApp;
 window.addTask=addTask;
 window.saveNotes=saveNotes;

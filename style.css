@@ -497,3 +497,68 @@ button, a, label, [role="button"] { touch-action: manipulation; }
   .lock-hint { font-size: 10px; }
   .lock-hint code { display: block; margin-top: 4px; word-break: break-all; }
 }
+
+/* ── DATE TABS (task date switcher) ─────────── */
+.date-tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.dtab {
+  flex: 1;
+  min-width: 70px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.dtab:hover { border-color: var(--border2); color: var(--text); }
+.dtab-active {
+  background: rgba(200,184,154,.15) !important;
+  color: var(--accent) !important;
+  border-color: rgba(200,184,154,.35) !important;
+  font-weight: 600;
+}
+.date-picker-input {
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.date-picker-input:focus { border-color: var(--accent); }
+
+/* ── LIFE REMINDERS ─────────────────────────── */
+.reminder-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--border);
+  transition: opacity 0.2s;
+}
+.reminder-item:last-child { border-bottom: none; }
+.reminder-text {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.reminder-done .reminder-text {
+  text-decoration: line-through;
+  color: var(--text3);
+}
+.reminder-done { opacity: 0.6; }
