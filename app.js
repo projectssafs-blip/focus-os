@@ -156,6 +156,7 @@ function buildDomainPages() {
             </div>
             <div class="task-input-row">
               <input type="text" class="task-input" id="${d.id}-task-input" placeholder="Add a task…" maxlength="200" />
+              <button class="bonus-toggle-btn" id="${d.id}-bonus-toggle" onclick="toggleBonusMode('${d.id}')" title="Bonus task — counts in analytics if done, never hurts progress if skipped">⭐</button>
               <button class="add-btn" style="background:${d.color}" onclick="addTask('${d.id}')">+</button>
             </div>
             <ul class="task-list" id="${d.id}-task-list"></ul>
@@ -396,12 +397,16 @@ function renderTasks(domain, tasks) {
     .filter(({task})=>(task.taskDate||todayKey())===activeDate);
 
   const done = pairs.filter(({task})=>task.done).length;
-  if(count) count.textContent=`${done}/${pairs.length}`;
+  // bonus tasks that are not done don't count toward the total
+  const countedTotal = pairs.filter(({task})=>!task.bonus || task.done).length;
+  const countedDone = pairs.filter(({task})=>task.done && !task.bonus).length;
+  const bonusDone = pairs.filter(({task})=>task.done && task.bonus).length;
+  if(count) count.textContent = bonusDone > 0 ? `${countedDone}/${countedTotal} +${bonusDone}⭐` : `${countedDone}/${countedTotal}`;
   const d = domainById(domain);
 
   pairs.forEach(({task,idx})=>{
     const li=document.createElement('li');
-    li.className='task-item'+(task.done?' done':'')+(activeTask&&activeTask.domain===domain&&activeTask.idx===idx?' active-task':'');
+    li.className='task-item'+(task.done?' done':'')+(task.bonus?' bonus-task':'')+(activeTask&&activeTask.domain===domain&&activeTask.idx===idx?' active-task':'');
 
     const cb=document.createElement('input');
     cb.type='checkbox'; cb.checked=task.done;
@@ -410,6 +415,11 @@ function renderTasks(domain, tasks) {
 
     const span=document.createElement('span');
     span.className='task-text'; span.textContent=task.text;
+    if(task.bonus) {
+      const badge=document.createElement('span');
+      badge.className='bonus-badge'; badge.textContent='⭐ bonus';
+      span.appendChild(badge);
+    }
 
     const timeSpan=document.createElement('span');
     timeSpan.className='task-time-info';
@@ -456,16 +466,32 @@ function renderTasks(domain, tasks) {
   updateProgress(domain);
 }
 
+/* ════════════════════════════════════════════
+   BONUS MODE — per-domain toggle state
+   Bonus tasks: skipped = no penalty; completed = shows in analytics
+════════════════════════════════════════════ */
+const bonusMode = {};
+function toggleBonusMode(domain) {
+  bonusMode[domain] = !bonusMode[domain];
+  const btn = document.getElementById(domain+'-bonus-toggle');
+  const input = document.getElementById(domain+'-task-input');
+  if(btn) btn.classList.toggle('bonus-active', !!bonusMode[domain]);
+  if(input) input.placeholder = bonusMode[domain] ? '⭐ Add bonus task…' : 'Add a task…';
+}
+
 function addTask(domain) {
   const input=document.getElementById(domain+'-task-input');
   if(!input) return;
   const raw=input.value.trim(); if(!raw) return;
   const safe=raw.replace(/[<>"'&]/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;','&':'&amp;'}[c]));
   const tasks=getTasks(domain);
-  tasks.push({text:safe,done:false,created:Date.now(),taskDate:getTaskDateView(domain),startTime:null,endTime:null,focusMin:null,breakMin:null,notes:''});
+  const isBonus = !!bonusMode[domain];
+  tasks.push({text:safe,done:false,created:Date.now(),taskDate:getTaskDateView(domain),startTime:null,endTime:null,focusMin:null,breakMin:null,notes:'',bonus:isBonus});
   setTasks(domain,tasks); renderTasks(domain,tasks);
   input.value=''; input.focus();
-  showToast('Task added');
+  // auto-reset bonus mode after adding
+  if(isBonus) toggleBonusMode(domain);
+  showToast(isBonus ? '⭐ Bonus task added' : 'Task added');
 }
 
 function toggleTask(domain,idx) {
@@ -543,8 +569,10 @@ function formatTime(ts) { if(!ts) return '--'; return new Date(ts).toLocaleTimeS
 function getProgress(domain) {
   const today=todayKey();
   const t=getTasks(domain).filter(x=>(x.taskDate||today)===today);
-  if(!t.length) return 0;
-  return Math.round((t.filter(x=>x.done).length/t.length)*100);
+  // bonus tasks only count if done; never penalize for skipping them
+  const counted = t.filter(x => !x.bonus || x.done);
+  if(!counted.length) return 0;
+  return Math.round((counted.filter(x=>x.done).length/counted.length)*100);
 }
 function updateProgress(domain) {
   const pct=getProgress(domain);
@@ -617,10 +645,13 @@ function tagStyle(t){ if(t==='general') return 'background:rgba(200,184,154,.1);
 ════════════════════════════════════════════ */
 function renderDashboard(){
   domainIds().forEach(d=>{
-    const pct=getProgress(d), tasks=getTasks(d), done=tasks.filter(t=>t.done).length;
+    const pct=getProgress(d), tasks=getTasks(d);
+    const normalDone=tasks.filter(t=>t.done&&!t.bonus).length;
+    const bonusDone=tasks.filter(t=>t.done&&t.bonus).length;
+    const normalTotal=tasks.filter(t=>!t.bonus).length;
     const bar=document.getElementById('dash-'+d+'-bar'); const pctEl=document.getElementById('dash-'+d+'-pct'); const meta=document.getElementById('dash-'+d+'-meta');
     if(bar) bar.style.width=pct+'%'; if(pctEl) pctEl.textContent=pct+'%';
-    if(meta) meta.textContent=`${done} of ${tasks.length} tasks completed`;
+    if(meta) meta.textContent=bonusDone>0?`${normalDone} of ${normalTotal} tasks · +${bonusDone}⭐ bonus`:`${normalDone} of ${normalTotal} tasks completed`;
   });
   const allTasks=domainIds().flatMap(d=>getTasks(d));
   document.getElementById('stat-tasks').textContent=allTasks.filter(t=>t.done).length;
@@ -677,8 +708,9 @@ function renderDomainPieChart(){
 function renderTasksBarChart(){
   const ctx=document.getElementById('chart-tasks-bar'); if(!ctx) return;
   const domains=getDomains();
+  // bonus done → counts as done (extra work); bonus pending → excluded (no penalty)
   const done=domains.map(d=>getTasks(d.id).filter(t=>t.done).length);
-  const pending=domains.map(d=>getTasks(d.id).filter(t=>!t.done).length);
+  const pending=domains.map(d=>getTasks(d.id).filter(t=>!t.done&&!t.bonus).length);
   if(charts.tasks) charts.tasks.destroy();
   charts.tasks=new Chart(ctx,{type:'bar',data:{labels:domains.map(d=>d.name),datasets:[{label:'Done',data:done,backgroundColor:domains.map(d=>hexToRgba(d.color,.6)),borderColor:domains.map(d=>d.color),borderWidth:1,borderRadius:4},{label:'Pending',data:pending,backgroundColor:'rgba(90,90,95,0.4)',borderColor:'#3a3a3e',borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{labels:{color:'#9e9b96',font:{family:'DM Sans',size:12}}}},scales:{x:{stacked:false,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#5e5c58',font:{family:'DM Sans',size:12}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#5e5c58',font:{family:'DM Sans',size:12}},beginAtZero:true}}}});
 }
@@ -1015,5 +1047,6 @@ window.promptDeleteSection=promptDeleteSection;
 window.cancelDeleteSection=cancelDeleteSection;
 window.confirmDeleteSection=confirmDeleteSection;
 window.closeSectionManager=closeSectionManager;
+window.toggleBonusMode=toggleBonusMode;
 window.toggleSidebar=toggleSidebar;
 window.closeSidebar=closeSidebar;
