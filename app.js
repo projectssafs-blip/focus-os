@@ -467,8 +467,8 @@ function renderTasks(domain, tasks) {
 }
 
 /* ════════════════════════════════════════════
-   BONUS MODE — per-domain toggle state
-   Bonus tasks: skipped = no penalty; completed = shows in analytics
+   BONUS MODE — per-domain toggle
+   Skipped = no penalty · Completed = shows in analytics
 ════════════════════════════════════════════ */
 const bonusMode = {};
 function toggleBonusMode(domain) {
@@ -488,7 +488,6 @@ function addTask(domain) {
   tasks.push({text:raw,done:false,created:Date.now(),taskDate:getTaskDateView(domain),startTime:null,endTime:null,focusMin:null,breakMin:null,notes:'',bonus:isBonus});
   setTasks(domain,tasks); renderTasks(domain,tasks);
   input.value=''; input.focus();
-  // auto-reset bonus mode after adding
   if(isBonus) toggleBonusMode(domain);
   showToast(isBonus ? '⭐ Bonus task added' : 'Task added');
 }
@@ -568,7 +567,7 @@ function formatTime(ts) { if(!ts) return '--'; return new Date(ts).toLocaleTimeS
 function getProgress(domain) {
   const today=todayKey();
   const t=getTasks(domain).filter(x=>(x.taskDate||today)===today);
-  // bonus tasks only count if done; never penalize for skipping them
+  // bonus tasks only penalize if done; skipped bonus = excluded from count
   const counted = t.filter(x => !x.bonus || x.done);
   if(!counted.length) return 0;
   return Math.round((counted.filter(x=>x.done).length/counted.length)*100);
@@ -707,7 +706,6 @@ function renderDomainPieChart(){
 function renderTasksBarChart(){
   const ctx=document.getElementById('chart-tasks-bar'); if(!ctx) return;
   const domains=getDomains();
-  // bonus done → counts as done (extra work); bonus pending → excluded (no penalty)
   const done=domains.map(d=>getTasks(d.id).filter(t=>t.done).length);
   const pending=domains.map(d=>getTasks(d.id).filter(t=>!t.done&&!t.bonus).length);
   if(charts.tasks) charts.tasks.destroy();
@@ -803,7 +801,7 @@ function exportPDF(){
   const cPie=new Chart(pieCanvas.getContext('2d'),{type:'doughnut',data:{labels:domains.map(d=>d.name),datasets:[{data:domainTotals,backgroundColor:domains.map(d=>hexToRgba(d.color,.8)),borderColor:domains.map(d=>d.color),borderWidth:2}]},options:{responsive:false,animation:false,cutout:'60%',plugins:{legend:{display:true,labels:{font:{size:12}}}}}});
   const pieImg=pieCanvas.toDataURL('image/png');cPie.destroy();
   const domainHTML=domains.map(d=>{const tasks=getTasks(d.id);const done=tasks.filter(t=>t.done);const pending=tasks.filter(t=>!t.done);const dRecs=records.filter(r=>r.domain===d.id);const fMin=dRecs.reduce((s,r)=>s+r.focusMin,0);const pct=tasks.length?Math.round(done.length/tasks.length*100):0;return `<div class="pdf-domain"><div class="pdf-domain-header" style="border-left:4px solid ${d.color}"><span>${d.icon} ${d.name.toUpperCase()}</span><span>${pct}% complete</span><span>${Math.round(fMin/60*10)/10}h focused</span></div><div class="pdf-progress-bar"><div style="width:${pct}%;background:${d.color};height:6px;border-radius:3px"></div></div>${done.length?`<div class="pdf-task-section"><strong>✓ Completed (${done.length})</strong><ul>${done.map(t=>`<li>${t.text}${t.focusMin?` <em>(${t.focusMin}m focus)</em>`:''}</li>`).join('')}</ul></div>`:''}${pending.length?`<div class="pdf-task-section"><strong>○ Pending (${pending.length})</strong><ul>${pending.map(t=>`<li>${t.text}</li>`).join('')}</ul></div>`:''}${Store.get('notes_'+d.id,'')?`<div class="pdf-task-section"><strong>Notes</strong><p>${Store.esc(Store.get('notes_'+d.id,''))}</p></div>`:''}</div>`;}).join('');
-  const timeHTML=records.slice(0,20).map(r=>`<tr><td>${r.date}</td><td>${r.domain.toUpperCase()}</td><td>${Store.esc(r.taskText)}</td><td>${r.focusMin}m</td><td>${r.breakMin}m</td><td>${r.notes?Store.esc(r.notes):'—'}</td></tr>`).join('');
+  const timeHTML=records.slice(0,20).map(r=>`<tr><td>${r.date}</td><td>${r.domain.toUpperCase()}</td><td>${r.taskText}</td><td>${r.focusMin}m</td><td>${r.breakMin}m</td><td>${r.notes||'—'}</td></tr>`).join('');
   const logHTML=logs.slice(0,10).map(l=>`<div class="pdf-log-entry"><span class="pdf-log-tag">${tagLabel(l.tag)}</span><span class="pdf-log-date">${l.date} · ${l.hours}h</span><p>${Store.esc(l.text)}</p></div>`).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Focus OS Report</title><style>@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;background:#fff;color:#1a1a1a;font-size:13px;line-height:1.6;}.cover{background:#0f0f10;color:#e8e6e1;padding:56px 48px;}.cover h1{font-family:'DM Serif Display',serif;font-size:36px;font-weight:400;color:#c8b89a;margin-bottom:8px;}.cover p{color:#9e9b96;font-size:14px;}.stats-bar{display:flex;gap:0;border-bottom:1px solid #eee;}.stat{flex:1;padding:20px 24px;text-align:center;border-right:1px solid #eee;}.stat:last-child{border-right:none;}.stat .val{font-family:'DM Serif Display',serif;font-size:28px;color:#1a1a1a;display:block;}.stat .lbl{font-size:11px;color:#888;letter-spacing:0.06em;text-transform:uppercase;}.section{padding:32px 48px;border-bottom:1px solid #eee;}.section-title{font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin-bottom:20px;color:#1a1a1a;}.pdf-domain{margin-bottom:28px;padding:20px;background:#f9f9f9;border-radius:8px;}.pdf-domain-header{display:flex;justify-content:space-between;font-weight:500;margin-bottom:10px;font-size:13px;}.pdf-progress-bar{background:#e5e5e5;border-radius:3px;height:6px;margin-bottom:14px;}.pdf-task-section{margin-top:12px;}.pdf-task-section strong{font-size:12px;color:#555;display:block;margin-bottom:4px;}.pdf-task-section ul{padding-left:16px;}.pdf-task-section li{margin-bottom:2px;font-size:12px;}.pdf-task-section em{color:#888;font-size:11px;}.pdf-task-section p{font-size:12px;color:#444;margin-top:4px;}table{width:100%;border-collapse:collapse;font-size:12px;}th{background:#f0f0f0;padding:8px 12px;text-align:left;font-weight:500;color:#555;font-size:11px;text-transform:uppercase;}td{padding:8px 12px;border-bottom:1px solid #f0f0f0;color:#333;}.pdf-log-entry{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #f0f0f0;}.pdf-log-tag{font-size:11px;font-weight:500;background:#f0f0f0;padding:2px 8px;border-radius:20px;margin-right:8px;}.pdf-log-date{font-size:11px;color:#888;}.pdf-log-entry p{margin-top:6px;color:#444;font-size:12px;}.footer{padding:24px 48px;text-align:center;font-size:11px;color:#aaa;background:#fafafa;}img{max-width:100%;border-radius:6px;}</style></head><body><div class="cover"><h1>Focus OS — Progress Report</h1><p>Generated on ${today}</p></div><div class="stats-bar"><div class="stat"><span class="val">${allTasks.filter(t=>t.done).length}</span><span class="lbl">Tasks Done</span></div><div class="stat"><span class="val">${allTasks.filter(t=>!t.done).length}</span><span class="lbl">Pending</span></div><div class="stat"><span class="val">${Math.round(totalFocusMin/60*10)/10}h</span><span class="lbl">Total Focus</span></div><div class="stat"><span class="val">${streak}🔥</span><span class="lbl">Day Streak</span></div><div class="stat"><span class="val">${new Set(logs.map(l=>l.date)).size}</span><span class="lbl">Days Logged</span></div></div><div class="section"><h2 class="section-title">Domain Progress</h2>${domainHTML}</div><div class="section"><h2 class="section-title">Focus Charts</h2><img src="${focusImg}" alt="Focus chart" style="width:100%;" /><div style="display:flex;justify-content:center;margin-top:20px;"><img src="${pieImg}" alt="Domain split" style="max-width:220px;" /></div></div>${timeHTML?`<div class="section"><h2 class="section-title">Task Time Records</h2><table><thead><tr><th>Date</th><th>Domain</th><th>Task</th><th>Focus</th><th>Break</th><th>Notes</th></tr></thead><tbody>${timeHTML}</tbody></table></div>`:''}${logHTML?`<div class="section"><h2 class="section-title">Daily Logs</h2>${logHTML}</div>`:''}<div class="footer">Focus OS · Exported ${new Date().toISOString()} · Keep building.</div></body></html>`;
   const w=window.open('','_blank');w.document.write(html);w.document.close();setTimeout(()=>w.print(),800);
