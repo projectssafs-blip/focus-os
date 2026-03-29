@@ -309,3 +309,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   .modal-card{margin:16px;padding:24px;}
   .modal-stats-row{flex-direction:column;}
 }
+
+/* ── SECTION MANAGER ─────────────────────────────── */
+.manage-btn { color: var(--text2); }
+.manage-btn:hover { color: var(--accent); }
+.sm-add-form { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }

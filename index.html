@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer" />
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" type="image/png" href="favicon.png" />
-<link rel="apple-touch-icon" href="favicon.png" />
+  <link rel="apple-touch-icon" href="favicon.png" />
   <title>Focus OS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -49,23 +49,13 @@
 
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo"><span>◈</span><span class="sidebar-title">Focus OS</span></div>
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <!-- static nav items -->
         <button class="nav-btn active" data-page="dashboard">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
           Dashboard
         </button>
-        <button class="nav-btn" data-page="vlsi">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-          VLSI
-        </button>
-        <button class="nav-btn" data-page="cuda">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-          CUDA
-        </button>
-        <button class="nav-btn" data-page="gate">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
-          GATE Prep
-        </button>
+        <!-- domain nav buttons injected here by JS -->
         <button class="nav-btn" data-page="daily">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           Daily Log
@@ -79,6 +69,7 @@
         <div class="streak-badge">🔥 <span id="sidebar-streak">0</span> day streak</div>
         <button class="export-side-btn" id="export-json-side">💾 Backup JSON</button>
         <button class="export-side-btn pdf-side" id="export-pdf-side">📄 Export PDF</button>
+        <button class="export-side-btn manage-btn" id="manage-sections-btn">⚙ Manage Sections</button>
         <button class="logout-btn" id="logout-btn">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
           Lock
@@ -115,142 +106,16 @@
           <div class="stat-card"><span class="stat-val" id="stat-streak">0🔥</span><span class="stat-label">Streak</span></div>
           <div class="stat-card"><span class="stat-val" id="stat-logs">0</span><span class="stat-label">Days Logged</span></div>
         </div>
-        <div class="domain-grid">
-          <div class="domain-card" data-domain="vlsi">
-            <div class="domain-card-header"><span class="domain-icon">⚡</span><h3>VLSI</h3><span class="domain-pct" id="dash-vlsi-pct">0%</span></div>
-            <div class="progress-track"><div class="progress-fill" id="dash-vlsi-bar" style="width:0%"></div></div>
-            <p class="domain-card-meta" id="dash-vlsi-meta">0 tasks completed</p>
-          </div>
-          <div class="domain-card" data-domain="cuda">
-            <div class="domain-card-header"><span class="domain-icon">🖥</span><h3>CUDA</h3><span class="domain-pct" id="dash-cuda-pct">0%</span></div>
-            <div class="progress-track"><div class="progress-fill cuda" id="dash-cuda-bar" style="width:0%"></div></div>
-            <p class="domain-card-meta" id="dash-cuda-meta">0 tasks completed</p>
-          </div>
-          <div class="domain-card" data-domain="gate">
-            <div class="domain-card-header"><span class="domain-icon">📖</span><h3>GATE</h3><span class="domain-pct" id="dash-gate-pct">0%</span></div>
-            <div class="progress-track"><div class="progress-fill gate" id="dash-gate-bar" style="width:0%"></div></div>
-            <p class="domain-card-meta" id="dash-gate-meta">0 tasks completed</p>
-          </div>
-        </div>
+        <!-- domain cards injected by JS -->
+        <div class="domain-grid" id="domain-grid"></div>
         <div class="recent-logs-section">
           <h3 class="section-title">Recent Activity</h3>
           <div id="recent-logs-list" class="recent-logs-list"><p class="empty-msg">No entries yet.</p></div>
         </div>
       </section>
 
-      <!-- VLSI -->
-      <section class="page" id="page-vlsi">
-        <div class="page-header">
-          <div><h2 class="page-title"><span style="color:var(--vlsi)">⚡</span> VLSI</h2><p class="page-sub">Frontend & Backend Design</p></div>
-          <div class="page-pct-badge" id="vlsi-pct-badge">0%</div>
-        </div>
-        <div class="progress-track big"><div class="progress-fill" id="vlsi-big-bar" style="width:0%"></div></div>
-        <div id="vlsi-active-timer" class="active-timer-bar hidden"></div>
-        <div class="domain-layout">
-          <div class="domain-left">
-            <div class="card">
-              <div class="card-head"><h3>Tasks</h3><span class="task-count" id="vlsi-task-count">0/0</span></div>
-              <div class="task-input-row">
-                <input type="text" class="task-input" id="vlsi-task-input" placeholder="Add a task…" maxlength="200" />
-                <button class="add-btn" onclick="addTask('vlsi')">+</button>
-              </div>
-              <ul class="task-list" id="vlsi-task-list"></ul>
-            </div>
-            <div class="card">
-              <div class="card-head"><h3>Weekly Goals</h3></div>
-              <textarea class="notes-area" id="vlsi-goals" placeholder="What do you want to achieve this week?"></textarea>
-            </div>
-          </div>
-          <div class="domain-right">
-            <div class="card">
-              <div class="card-head"><h3>What I did today</h3></div>
-              <textarea class="notes-area" id="vlsi-today" placeholder="Describe what you worked on today…"></textarea>
-              <button class="save-btn" onclick="saveToday('vlsi')">Save Entry</button>
-            </div>
-            <div class="card">
-              <div class="card-head"><h3>Notes</h3></div>
-              <textarea class="notes-area tall" id="vlsi-notes" placeholder="Concepts, references, ideas…"></textarea>
-              <button class="save-btn" onclick="saveNotes('vlsi')">Save Notes</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- CUDA -->
-      <section class="page" id="page-cuda">
-        <div class="page-header">
-          <div><h2 class="page-title"><span style="color:var(--cuda)">🖥</span> CUDA Programming</h2><p class="page-sub">GPU Parallel Computing</p></div>
-          <div class="page-pct-badge cuda-badge" id="cuda-pct-badge">0%</div>
-        </div>
-        <div class="progress-track big"><div class="progress-fill cuda" id="cuda-big-bar" style="width:0%"></div></div>
-        <div id="cuda-active-timer" class="active-timer-bar hidden"></div>
-        <div class="domain-layout">
-          <div class="domain-left">
-            <div class="card">
-              <div class="card-head"><h3>Tasks</h3><span class="task-count" id="cuda-task-count">0/0</span></div>
-              <div class="task-input-row">
-                <input type="text" class="task-input" id="cuda-task-input" placeholder="Add a task…" maxlength="200" />
-                <button class="add-btn cuda-add" onclick="addTask('cuda')">+</button>
-              </div>
-              <ul class="task-list" id="cuda-task-list"></ul>
-            </div>
-            <div class="card">
-              <div class="card-head"><h3>Weekly Goals</h3></div>
-              <textarea class="notes-area" id="cuda-goals" placeholder="What do you want to achieve this week?"></textarea>
-            </div>
-          </div>
-          <div class="domain-right">
-            <div class="card">
-              <div class="card-head"><h3>What I did today</h3></div>
-              <textarea class="notes-area" id="cuda-today" placeholder="Describe what you worked on today…"></textarea>
-              <button class="save-btn cuda-save" onclick="saveToday('cuda')">Save Entry</button>
-            </div>
-            <div class="card">
-              <div class="card-head"><h3>Notes</h3></div>
-              <textarea class="notes-area tall" id="cuda-notes" placeholder="Kernels, memory, benchmarks…"></textarea>
-              <button class="save-btn cuda-save" onclick="saveNotes('cuda')">Save Notes</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- GATE -->
-      <section class="page" id="page-gate">
-        <div class="page-header">
-          <div><h2 class="page-title"><span style="color:var(--gate)">📖</span> GATE Preparation</h2><p class="page-sub">Systematic exam readiness</p></div>
-          <div class="page-pct-badge gate-badge" id="gate-pct-badge">0%</div>
-        </div>
-        <div class="progress-track big"><div class="progress-fill gate" id="gate-big-bar" style="width:0%"></div></div>
-        <div id="gate-active-timer" class="active-timer-bar hidden"></div>
-        <div class="domain-layout">
-          <div class="domain-left">
-            <div class="card">
-              <div class="card-head"><h3>Tasks</h3><span class="task-count" id="gate-task-count">0/0</span></div>
-              <div class="task-input-row">
-                <input type="text" class="task-input" id="gate-task-input" placeholder="Add a task…" maxlength="200" />
-                <button class="add-btn gate-add" onclick="addTask('gate')">+</button>
-              </div>
-              <ul class="task-list" id="gate-task-list"></ul>
-            </div>
-            <div class="card">
-              <div class="card-head"><h3>Weekly Goals</h3></div>
-              <textarea class="notes-area" id="gate-goals" placeholder="Topics to cover this week…"></textarea>
-            </div>
-          </div>
-          <div class="domain-right">
-            <div class="card">
-              <div class="card-head"><h3>What I did today</h3></div>
-              <textarea class="notes-area" id="gate-today" placeholder="Subjects studied, problems solved…"></textarea>
-              <button class="save-btn gate-save" onclick="saveToday('gate')">Save Entry</button>
-            </div>
-            <div class="card">
-              <div class="card-head"><h3>Notes</h3></div>
-              <textarea class="notes-area tall" id="gate-notes" placeholder="Formulas, concepts, weak areas…"></textarea>
-              <button class="save-btn gate-save" onclick="saveNotes('gate')">Save Notes</button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- domain pages injected by JS into #dynamic-pages -->
+      <div id="dynamic-pages"></div>
 
       <!-- DAILY LOG -->
       <section class="page" id="page-daily">
@@ -259,10 +124,8 @@
         </div>
         <div class="card daily-entry-card">
           <h3>Log Today's Work</h3>
-          <div class="daily-tag-row">
-            <button class="tag-btn active" data-tag="vlsi">⚡ VLSI</button>
-            <button class="tag-btn" data-tag="cuda">🖥 CUDA</button>
-            <button class="tag-btn" data-tag="gate">📖 GATE</button>
+          <div class="daily-tag-row" id="daily-tag-row">
+            <!-- domain tags injected by JS -->
             <button class="tag-btn" data-tag="general">✦ General</button>
           </div>
           <textarea class="notes-area" id="daily-entry-text" placeholder="What did you work on? What did you learn? Tomorrow's focus?"></textarea>
@@ -418,6 +281,54 @@
           <button class="save-btn" style="color:var(--text2);" onclick="generateReportWithUpload()">Generate with uploaded data</button>
           <button class="save-btn" onclick="generateReportCurrentData()">Use current data</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION MANAGER MODAL -->
+  <div id="section-manager-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:480px;gap:16px;" onclick="event.stopPropagation()">
+      <h3 class="modal-title">⚙ Manage Sections</h3>
+      <p style="font-size:13px;color:var(--text3);margin-top:-8px;">Add new domain sections or remove existing ones. Each section gets its own page, tasks, and progress tracking.</p>
+
+      <!-- existing sections list -->
+      <div id="sm-sections-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+
+      <!-- add new section form -->
+      <div class="sm-add-form">
+        <p style="font-size:12px;font-weight:500;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">Add New Section</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:1;min-width:140px;">
+            <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;">Name</label>
+            <input type="text" id="sm-name-input" class="task-input" placeholder="e.g. Startup" maxlength="30" style="width:100%;" />
+          </div>
+          <div style="flex:0 0 auto;">
+            <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;">Icon</label>
+            <input type="text" id="sm-icon-input" class="task-input" placeholder="🚀" maxlength="4" style="width:60px;text-align:center;font-size:18px;" />
+          </div>
+          <div style="flex:0 0 auto;">
+            <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;">Color</label>
+            <input type="color" id="sm-color-input" value="#c8b89a" style="width:44px;height:36px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);cursor:pointer;padding:2px;" />
+          </div>
+          <button class="add-btn" onclick="addSection()" style="background:var(--accent);color:var(--bg);flex-shrink:0;">+</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="save-btn" onclick="closeSectionManager()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Section Confirm -->
+  <div id="delete-section-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:380px;" onclick="event.stopPropagation()">
+      <h3 class="modal-title">Remove Section?</h3>
+      <p id="delete-section-msg" style="font-size:14px;color:var(--text2);"></p>
+      <p style="font-size:12px;color:var(--danger);">⚠ Tasks and notes for this section will be hidden but not deleted. You can restore them by re-adding a section with the same name.</p>
+      <div class="modal-actions">
+        <button class="cancel-btn" onclick="cancelDeleteSection()">Cancel</button>
+        <button class="save-btn" style="color:var(--danger);border-color:rgba(232,126,126,.3);" onclick="confirmDeleteSection()">Remove</button>
       </div>
     </div>
   </div>
