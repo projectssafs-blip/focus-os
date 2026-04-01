@@ -573,3 +573,58 @@ button, a, label, [role="button"] { touch-action: manipulation; }
   color: var(--text3);
 }
 .reminder-done { opacity: 0.6; }
+/* ── DEVICE INVITE TOKEN UI ─────────────────── */
+.invite-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+  color: var(--text3);
+  font-size: 12px;
+  letter-spacing: .06em;
+}
+.invite-divider::before,
+.invite-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.invite-toggle-btn {
+  width: 100%;
+  padding: 9px 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.invite-toggle-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.invite-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  animation: fadeIn .2s ease;
+}
+.invite-section input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: monospace;
+  letter-spacing: .04em;
+  outline: none;
+  transition: border-color .2s;
+  box-sizing: border-box;
+}
+.invite-section input:focus { border-color: var(--accent); }

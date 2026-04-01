@@ -46,6 +46,21 @@
       <div id="lockout-msg" class="lockout-msg hidden">
         ⚠ Too many failed attempts. Locked for <span id="lockout-timer">30</span>s.
       </div>
+
+      <!-- Device invite token section -->
+      <div class="invite-divider">
+        <span>or</span>
+      </div>
+      <button id="invite-unlock-btn" class="invite-toggle-btn">Use Device Token</button>
+      <div id="invite-section" class="invite-section hidden">
+        <div class="lock-field" style="margin-top:0">
+          <label for="invite-input">One-Time Device Token</label>
+          <input type="text" id="invite-input" placeholder="Paste token from another device" autocomplete="off" spellcheck="false" maxlength="64" />
+        </div>
+        <button id="invite-go-btn" class="unlock-btn" style="margin-top:8px;">Use Token</button>
+        <p class="lock-hint" style="margin-top:10px;">On your logged-in device: DevTools → <code>Auth.createInvite()</code></p>
+      </div>
+
       <p class="lock-hint">First time? DevTools console → <code>await Auth.setPassword("yourpassword")</code></p>
     </div>
     <div class="lock-bg"></div>
