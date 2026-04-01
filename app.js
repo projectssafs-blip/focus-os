@@ -63,6 +63,41 @@ function dateKey(d) {
 function todayKey() { return dateKey(new Date()); }
 function tomorrowKey() { const d=new Date(); d.setDate(d.getDate()+1); return dateKey(d); }
 
+// Parse en-IN locale date key (dd/mm/yyyy) → Date object
+function parseDateKey(dk) {
+  if(!dk) return null;
+  const p = dk.split('/').map(Number);
+  return new Date(p[2], p[1]-1, p[0]);
+}
+// Returns true if the date key is strictly before today (midnight)
+function isBeforeToday(dk) {
+  const d = parseDateKey(dk); if(!d) return false;
+  d.setHours(0,0,0,0);
+  const t = new Date(); t.setHours(0,0,0,0);
+  return d < t;
+}
+
+/* ════════════════════════════════════════════
+   ROLLOVER — move past undone tasks to today
+   Preserves originalDate for analytics penalty
+════════════════════════════════════════════ */
+function rolloverMissedTasks() {
+  const today = todayKey();
+  getDomains().forEach(({id}) => {
+    const tasks = getTasks(id);
+    let changed = false;
+    tasks.forEach(task => {
+      if (!task.done && task.taskDate && isBeforeToday(task.taskDate)) {
+        if (!task.originalDate) task.originalDate = task.taskDate; // remember original due date
+        task.taskDate = today;
+        task.rolledOver = true;
+        changed = true;
+      }
+    });
+    if (changed) setTasks(id, tasks);
+  });
+}
+
 // per-domain: { domainId: 'YYYY...' (en-IN locale string) }
 const taskDateView = {};
 
@@ -244,6 +279,7 @@ function rebuildDomainUI() {
 function initApp() {
   renderQuote();
   renderDate();
+  rolloverMissedTasks();   // ← move past undone tasks to today
   rebuildDomainUI();
   initNav();
   renderDailyLog();
@@ -420,6 +456,18 @@ function renderTasks(domain, tasks) {
       badge.className='bonus-badge'; badge.textContent='⭐ bonus';
       span.appendChild(badge);
     }
+    if(task.rolledOver && !task.done) {
+      const rb=document.createElement('span');
+      rb.className='rollover-badge'; rb.textContent='↻ rolled';
+      rb.title=`Originally due: ${task.originalDate||'past'}`;
+      span.appendChild(rb);
+    }
+    if(task.late && task.done) {
+      const lb=document.createElement('span');
+      lb.className='late-badge'; lb.textContent='⚠ late';
+      lb.title=`Due: ${task.originalDate||'?'} · Completed: ${task.completedDate||'today'}`;
+      span.appendChild(lb);
+    }
 
     const timeSpan=document.createElement('span');
     timeSpan.className='task-time-info';
@@ -493,7 +541,15 @@ function addTask(domain) {
 }
 
 function toggleTask(domain,idx) {
-  const tasks=getTasks(domain); tasks[idx].done=!tasks[idx].done;
+  const tasks=getTasks(domain);
+  tasks[idx].done=!tasks[idx].done;
+  if(tasks[idx].done) {
+    tasks[idx].completedDate=todayKey();
+    const orig=tasks[idx].originalDate||tasks[idx].taskDate;
+    if(orig && tasks[idx].completedDate!==orig) tasks[idx].late=true;
+  } else {
+    tasks[idx].completedDate=null; tasks[idx].late=false;
+  }
   setTasks(domain,tasks); renderTasks(domain,tasks);
 }
 function deleteTask(domain,idx) {
@@ -553,6 +609,9 @@ function confirmTaskEnd() {
   const totalMin=task.startTime?Math.floor((Date.now()-task.startTime)/60000):0;
   const focusMin=Math.max(0,totalMin-breakMin);
   task.done=true; task.endTime=Date.now(); task.focusMin=focusMin; task.breakMin=breakMin; task.completionNotes=notes;
+  task.completedDate=todayKey();
+  const orig=task.originalDate||task.taskDate;
+  if(orig && task.completedDate!==orig) task.late=true;
   const records=Store.get('time_records',[]);
   records.push({domain,taskText:task.text,startTime:task.startTime,endTime:task.endTime,totalMin,focusMin,breakMin,notes,date:new Date().toLocaleDateString('en-IN'),ts:Date.now()});
   Store.set('time_records',records.slice(-500));
@@ -687,7 +746,7 @@ function updateStreak(){document.getElementById('sidebar-streak').textContent=ca
    ANALYTICS CHARTS
 ════════════════════════════════════════════ */
 let charts={};
-function renderCharts(){ renderDailyFocusChart(); renderDomainPieChart(); renderTasksBarChart(); renderCumulativeChart(); renderHeatmap(); renderWeeklyGoalRing(); renderTimeBreakdown(); loadReminderStatus(); }
+function renderCharts(){ renderDailyFocusChart(); renderDomainPieChart(); renderTasksBarChart(); renderCumulativeChart(); renderHeatmap(); renderWeeklyGoalRing(); renderTimeBreakdown(); loadReminderStatus(); renderPunctualityCard(); }
 
 function renderDailyFocusChart(){
   const ctx=document.getElementById('chart-daily-focus'); if(!ctx) return;
@@ -743,6 +802,45 @@ function renderWeeklyGoalRing(){
   document.getElementById('goal-ring-val').textContent=weekHours+'h';
   if(charts.goalRing) charts.goalRing.destroy();
   charts.goalRing=new Chart(ctx,{type:'doughnut',data:{datasets:[{data:[pct,1-pct],backgroundColor:[pct>=1?'rgba(126,203,174,0.9)':'rgba(126,203,174,0.7)','rgba(255,255,255,0.04)'],borderWidth:0,hoverOffset:0}]},options:{responsive:false,cutout:'78%',animation:{duration:800},plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+}
+function renderPunctualityCard() {
+  let card = document.getElementById('punctuality-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.className = 'chart-card';
+    card.id = 'punctuality-card';
+    const grid = document.querySelector('.analytics-grid');
+    if (grid) grid.appendChild(card);
+  }
+  const allTasks = getDomains().flatMap(d => getTasks(d.id));
+  const completed = allTasks.filter(t => t.done);
+  const lateCompleted = completed.filter(t => t.late);
+  const onTime = completed.length - lateCompleted.length;
+  const pct = completed.length ? Math.round(onTime / completed.length * 100) : 100;
+  const rolledPending = allTasks.filter(t => !t.done && t.rolledOver);
+  const color = pct >= 80 ? '#7ecbae' : pct >= 50 ? '#e8b47e' : '#e87e7e';
+  card.innerHTML = `
+    <h3 class="chart-title">Punctuality Score</h3>
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:14px;">
+      <div style="font-size:44px;font-weight:600;color:${color};font-family:'DM Serif Display',serif;line-height:1">${pct}%</div>
+      <div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:4px;">Tasks completed on their due date</div>
+        <div style="font-size:13px;color:var(--text2);">${onTime} on-time · <span style="color:#e87e7e;">${lateCompleted.length} late</span></div>
+        ${rolledPending.length ? `<div style="font-size:12px;color:#e8b47e;margin-top:4px;">⚠ ${rolledPending.length} task${rolledPending.length>1?'s':''} rolled over from missed days</div>` : ''}
+      </div>
+    </div>
+    <div style="background:var(--bg3);border-radius:6px;height:8px;overflow:hidden;margin-bottom:${lateCompleted.length?'14px':'0'}">
+      <div style="width:${pct}%;height:100%;background:${color};border-radius:6px;transition:width .6s ease;"></div>
+    </div>
+    ${lateCompleted.length ? `
+    <div>
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Late Completions</div>
+      ${lateCompleted.slice(-5).reverse().map(t=>`
+        <div style="font-size:12px;color:var(--text2);padding:5px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${Store.esc(t.text.substring(0,42))}${t.text.length>42?'…':''}</span>
+          <span style="color:#e87e7e;font-size:11px;flex-shrink:0;">due ${t.originalDate||'?'}</span>
+        </div>`).join('')}
+    </div>` : ''}`;
 }
 function saveWeeklyGoal(){ const v=parseFloat(document.getElementById('weekly-goal-input')?.value)||10; Store.set('weekly_goal',v); renderWeeklyGoalRing(); showToast('Weekly goal set: '+v+'h'); }
 function renderTimeBreakdown(){
