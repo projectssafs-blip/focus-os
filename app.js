@@ -505,7 +505,7 @@ function renderTasks(domain, tasks) {
     cb.addEventListener('change',()=>{
       if(task.done) { toggleTask(domain,idx); return; }
       if(activeTask&&activeTask.domain===domain&&activeTask.idx===idx) openTaskEndModal(domain,idx);
-      else toggleTask(domain,idx);
+      else openRetroCompleteModal(domain,idx);
     });
 
     li.appendChild(cb); li.appendChild(span); li.appendChild(timeSpan); li.appendChild(actions);
@@ -601,6 +601,76 @@ function openTaskEndModal(domain,idx) {
   document.getElementById('task-end-modal').classList.remove('hidden');
 }
 function closeTaskModal() { document.getElementById('task-end-modal').classList.add('hidden'); pendingComplete=null; }
+
+/* ── Retroactive Complete Modal (ticked without timer) ── */
+let pendingRetro = null;
+function openRetroCompleteModal(domain, idx) {
+  const tasks = getTasks(domain); const task = tasks[idx];
+  pendingRetro = { domain, idx };
+  document.getElementById('retro-task-name').textContent = task.text;
+  // default: end = now, start = 1h ago
+  const now = new Date();
+  const earlier = new Date(now.getTime() - 60*60*1000);
+  const fmt = d => d.toTimeString().slice(0,5);
+  document.getElementById('retro-start-time').value = fmt(earlier);
+  document.getElementById('retro-end-time').value = fmt(now);
+  document.getElementById('retro-notes').value = '';
+  document.getElementById('retro-break').value = '0';
+  document.getElementById('retro-complete-modal').classList.remove('hidden');
+}
+function closeRetroModal() {
+  document.getElementById('retro-complete-modal').classList.add('hidden');
+  if(pendingRetro) {
+    // user clicked "Skip / Just Tick" — mark done with no time data
+    const {domain,idx} = pendingRetro;
+    toggleTask(domain, idx);
+    pendingRetro = null;
+  }
+}
+function confirmRetroComplete() {
+  if(!pendingRetro) return;
+  const {domain,idx} = pendingRetro;
+  const tasks = getTasks(domain); const task = tasks[idx];
+  const startVal = document.getElementById('retro-start-time').value;
+  const endVal   = document.getElementById('retro-end-time').value;
+  const notes    = document.getElementById('retro-notes').value.trim();
+  const breakMin = parseInt(document.getElementById('retro-break').value) || 0;
+
+  // build timestamps from today's date + entered times
+  const today = new Date();
+  const parseTime = (val) => {
+    if(!val) return null;
+    const [h,m] = val.split(':').map(Number);
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m, 0, 0);
+    return d.getTime();
+  };
+  const startTs = parseTime(startVal);
+  const endTs   = parseTime(endVal);
+  const totalMin = (startTs && endTs && endTs > startTs) ? Math.floor((endTs - startTs) / 60000) : 0;
+  const focusMin = Math.max(0, totalMin - breakMin);
+
+  task.done = true;
+  task.startTime = startTs;
+  task.endTime   = endTs;
+  task.focusMin  = focusMin;
+  task.breakMin  = breakMin;
+  task.completionNotes = notes;
+  task.completedDate = todayKey();
+  const orig = task.originalDate || task.taskDate;
+  if(orig && task.completedDate !== orig) task.late = true;
+
+  if(focusMin > 0) {
+    const records = Store.get('time_records', []);
+    records.push({ domain, taskText: task.text, startTime: startTs, endTime: endTs, totalMin, focusMin, breakMin, notes, date: new Date().toLocaleDateString('en-IN'), ts: Date.now() });
+    Store.set('time_records', records.slice(-500));
+  }
+
+  setTasks(domain, tasks);
+  document.getElementById('retro-complete-modal').classList.add('hidden');
+  pendingRetro = null;
+  renderTasks(domain, tasks); renderDashboard();
+  showToast(focusMin > 0 ? `✓ Logged! ${focusMin}m focus` : '✓ Task marked complete');
+}
 function confirmTaskEnd() {
   if(!pendingComplete) return;
   const {domain,idx}=pendingComplete; const tasks=getTasks(domain); const task=tasks[idx];
@@ -1129,6 +1199,8 @@ window.exportJSON=exportJSON;
 window.exportPDF=exportPDF;
 window.openTaskEndModal=openTaskEndModal;
 window.closeTaskModal=closeTaskModal;
+window.confirmRetroComplete=confirmRetroComplete;
+window.closeRetroModal=closeRetroModal;
 window.confirmTaskEnd=confirmTaskEnd;
 window.saveReminderTime=saveReminderTime;
 window.clearReminder=clearReminder;

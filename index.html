@@ -320,6 +320,44 @@
     </div>
   </div>
 
+  <!-- Retroactive Complete Modal (ticked without starting) -->
+  <div id="retro-complete-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 class="modal-title">Log Completed Task ✓</h3>
+      <p class="modal-task-name" id="retro-task-name"></p>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:14px;">You ticked this without starting a timer — fill in when you did it.</p>
+      <div class="modal-field">
+        <label>Start time</label>
+        <input type="time" class="hours-select" id="retro-start-time" style="width:100%;padding:8px 10px;" />
+      </div>
+      <div class="modal-field">
+        <label>End time</label>
+        <input type="time" class="hours-select" id="retro-end-time" style="width:100%;padding:8px 10px;" />
+      </div>
+      <div class="modal-field">
+        <label>What did you accomplish?</label>
+        <textarea class="notes-area" id="retro-notes" placeholder="Brief summary of what you did…" rows="3"></textarea>
+      </div>
+      <div class="modal-field">
+        <label>Break time taken</label>
+        <select class="hours-select" id="retro-break">
+          <option value="0">No breaks</option>
+          <option value="5">~5 min</option>
+          <option value="10">~10 min</option>
+          <option value="15">~15 min</option>
+          <option value="20">~20 min</option>
+          <option value="30">~30 min</option>
+          <option value="45">~45 min</option>
+          <option value="60">1 hour+</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="save-btn" onclick="confirmRetroComplete()">Mark Complete</button>
+        <button class="cancel-btn" onclick="closeRetroModal()">Skip / Just Tick</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Reminder Popup -->
   <div id="reminder-popup" class="reminder-popup hidden">
     <div class="reminder-popup-inner">
