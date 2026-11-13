@@ -11,7 +11,7 @@ const Store = {
     try { const v=localStorage.getItem('fo_'+key); return v!==null?JSON.parse(v):fallback; } catch { return fallback; }
   },
   set(key, val) {
-    try { localStorage.setItem('fo_'+key, JSON.stringify(val)); }
+    try { localStorage.setItem('fo_'+key, JSON.stringify(val)); window.FocusCloudData?.saveKey(key,val); }
     catch { showToast('Storage full. Export your data!','error'); }
   },
   all() {
@@ -19,7 +19,7 @@ const Store = {
     try {
       for(let i=0;i<localStorage.length;i++){
         const k=localStorage.key(i);
-        if(k&&k.startsWith('fo_')&&!k.startsWith('fo_pw')&&!k.startsWith('fo_session')&&!k.startsWith('fo_audit')) {
+        if(k&&k.startsWith('fo_')&&!k.startsWith('fo_pw')&&!k.startsWith('fo_session')&&!k.startsWith('fo_audit')&&!['fo_attempts','fo_lock_until','fo_trusted_key','fo_invites','fo_trusted_devices'].includes(k)) {
           try{data[k.replace('fo_','')]=JSON.parse(localStorage.getItem(k));}catch{}
         }
       }
@@ -28,8 +28,8 @@ const Store = {
   },
   restore(data) {
     Object.entries(data).forEach(([k,v])=>{
-      if(k==='pw_hash'||k==='session'||k==='audit') return;
-      try{localStorage.setItem('fo_'+k,JSON.stringify(v));}catch{}
+      if(k==='_exported'||k==='pw_hash'||k==='session'||k==='audit'||['attempts','lock_until','trusted_key','invites','trusted_devices'].includes(k)) return;
+      this.set(k,v);
     });
   }
 };
@@ -313,6 +313,23 @@ function renderDate() {
    NAVIGATION
 ════════════════════════════════════════════ */
 function initNav() {
+  document.getElementById('dashboard-add-task')?.addEventListener('click', () => {
+    const firstDomain = getDomains()[0];
+    if (!firstDomain) {
+      showToast('Add a study section first using Manage Sections.', 'error');
+      return;
+    }
+    navigateTo(firstDomain.id);
+    requestAnimationFrame(() => document.getElementById(firstDomain.id + '-task-input')?.focus());
+  });
+  document.getElementById('dashboard-log')?.addEventListener('click', () => {
+    navigateTo('daily');
+    requestAnimationFrame(() => document.getElementById('daily-entry-text')?.focus());
+  });
+  document.getElementById('dashboard-reminders')?.addEventListener('click', () => {
+    navigateTo('reminders');
+    requestAnimationFrame(() => document.getElementById('reminder-item-input')?.focus());
+  });
   document.querySelectorAll('.nav-btn:not(.domain-nav)').forEach(btn => {
     btn.addEventListener('click', () => { navigateTo(btn.dataset.page); closeSidebar(); });
   });
@@ -321,7 +338,7 @@ function initNav() {
   });
   // overlay tap closes sidebar
   document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
-  document.getElementById('logout-btn')?.addEventListener('click', () => { Auth.logout(); location.reload(); });
+  document.getElementById('logout-btn')?.addEventListener('click', async () => { await Auth.logout(); });
 
   // ── Bottom Nav ──
   document.querySelectorAll('.bnav-btn[data-page]').forEach(btn => {
@@ -352,6 +369,10 @@ function navigateTo(page) {
   const pageEl = document.getElementById('page-'+page);
   if(!pageEl) { navigateTo('dashboard'); return; }
   pageEl.classList.add('active');
+  document.querySelectorAll('.nav-btn[data-page]').forEach(b => {
+    if (b.dataset.page === page) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
   const btn=document.querySelector(`.nav-btn[data-page="${page}"]`);
   btn?.classList.add('active');
   const tp=document.getElementById('topbar-page');
@@ -368,11 +389,13 @@ function toggleSidebar() {
   const isOpen = sb?.classList.contains('open');
   if(isOpen) { closeSidebar(); } else {
     sb?.classList.add('open');
+    document.getElementById('menu-toggle')?.setAttribute('aria-expanded', 'true');
     ov?.classList.add('active');
   }
 }
 function closeSidebar() {
   document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('menu-toggle')?.setAttribute('aria-expanded', 'false');
   document.getElementById('sidebar-overlay')?.classList.remove('active');
 }
 
@@ -386,10 +409,17 @@ function syncBottomNav(page) {
   const staticPages = ['dashboard','daily','analytics'];
   const isDomainPage = !staticPages.includes(page);
   document.querySelectorAll('.bnav-btn[data-page]').forEach(b => {
-    b.classList.toggle('active', b.dataset.page === page);
+    const active = b.dataset.page === page;
+    b.classList.toggle('active', active);
+    if (active) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
   });
   const domainsBtn = document.getElementById('bnav-domains-btn');
-  if(domainsBtn) domainsBtn.classList.toggle('active', isDomainPage);
+  if(domainsBtn) {
+    domainsBtn.classList.toggle('active', isDomainPage);
+    if (isDomainPage) domainsBtn.setAttribute('aria-current', 'page');
+    else domainsBtn.removeAttribute('aria-current');
+  }
   const menuBtn = document.getElementById('bnav-menu-btn');
   if(menuBtn) menuBtn.classList.remove('active');
 }
