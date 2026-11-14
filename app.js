@@ -11,7 +11,7 @@ const Store = {
     try { const v=localStorage.getItem('fo_'+key); return v!==null?JSON.parse(v):fallback; } catch { return fallback; }
   },
   set(key, val) {
-    try { localStorage.setItem('fo_'+key, JSON.stringify(val)); window.FocusCloudData?.saveKey(key,val); }
+    try { localStorage.setItem('fo_'+key, JSON.stringify(val)); window.FocusCloudData?.saveKey(key,val); window.FocusCouples?.onLocalDataChanged(key); }
     catch { showToast('Storage full. Export your data!','error'); }
   },
   all() {
@@ -379,6 +379,7 @@ function navigateTo(page) {
   if(tp) tp.textContent = btn ? btn.textContent.trim() : page;
   if(page==='dashboard') renderDashboard();
   if(page==='analytics') { setTimeout(renderCharts,100); renderTimeBreakdown(); }
+  if(page==='couples') window.FocusCouples?.loadPage();
   syncBottomNav(page);
   // scroll main content to top on page change
   document.querySelector('.main-content')?.scrollTo({top:0, behavior:'instant'});
@@ -406,7 +407,7 @@ function haptic(ms=8) {
 
 /* ── Sync bottom nav active state ── */
 function syncBottomNav(page) {
-  const staticPages = ['dashboard','daily','analytics'];
+  const staticPages = ['dashboard','daily','analytics','couples'];
   const isDomainPage = !staticPages.includes(page);
   document.querySelectorAll('.bnav-btn[data-page]').forEach(b => {
     const active = b.dataset.page === page;
@@ -507,6 +508,15 @@ function renderTasks(domain, tasks) {
     const actions=document.createElement('div');
     actions.className='task-actions';
 
+    const shareBtn=document.createElement('button');
+    shareBtn.className='task-share-toggle'+(task.private?' is-private':'');
+    shareBtn.type='button';
+    shareBtn.textContent=task.private?'🔒':'↗';
+    shareBtn.title=task.private?'Hidden from your study partner':'Shared with your study partner';
+    shareBtn.setAttribute('aria-label',task.private?'Share this task with your partner':'Hide this task from your partner');
+    shareBtn.addEventListener('click',()=>toggleTaskPrivacy(domain,idx));
+    actions.appendChild(shareBtn);
+
     if(!task.done) {
       if(activeTask&&activeTask.domain===domain&&activeTask.idx===idx) {
         const stopBtn=document.createElement('button');
@@ -563,11 +573,17 @@ function addTask(domain) {
   const raw=input.value.trim(); if(!raw) return;
   const tasks=getTasks(domain);
   const isBonus = !!bonusMode[domain];
-  tasks.push({text:raw,done:false,created:Date.now(),taskDate:getTaskDateView(domain),startTime:null,endTime:null,focusMin:null,breakMin:null,notes:'',bonus:isBonus});
+  tasks.push({id:crypto.randomUUID(),text:raw,done:false,private:false,created:Date.now(),taskDate:getTaskDateView(domain),startTime:null,endTime:null,focusMin:null,breakMin:null,notes:'',bonus:isBonus});
   setTasks(domain,tasks); renderTasks(domain,tasks);
   input.value=''; input.focus();
   if(isBonus) toggleBonusMode(domain);
   showToast(isBonus ? '⭐ Bonus task added' : 'Task added');
+}
+
+function toggleTaskPrivacy(domain,idx){
+  const tasks=getTasks(domain),task=tasks[idx];if(!task)return;
+  task.private=!task.private;setTasks(domain,tasks);renderTasks(domain,tasks);
+  showToast(task.private?'🔒 Hidden from your partner':'↗ Shared with your partner');
 }
 
 function toggleTask(domain,idx) {

@@ -6,12 +6,14 @@ const Auth=(()=>{
     const a=document.getElementById("lock-alert");if(a){a.textContent=isError?message:"";a.classList.toggle("hidden",!isError);}
   }
   async function activate(session){
-    if(!session?.user){if(activeUserId){window.FocusCloudData.close();activeUserId=null;}login("Sign in with Google to open your study workspace.");return;}
+    if(!session?.user){if(activeUserId){window.FocusCouples?.close();window.FocusCloudData.close();activeUserId=null;}login("Sign in with Google to open your study workspace.");return;}
     const user=session.user;if(activeUserId===user.id||openingUserId===user.id)return;
-    if(activeUserId&&activeUserId!==user.id){window.FocusCloudData.close();activeUserId=null;}
+    if(activeUserId&&activeUserId!==user.id){window.FocusCouples?.close();window.FocusCloudData.close();activeUserId=null;}
     openingUserId=user.id;login("Loading your private study data…");
     try{
       await window.FocusCloudData.openForUser(user);activeUserId=user.id;
+      window.FocusSupabaseClient=client;
+      await window.FocusCouples?.initForUser(user);
       const e=document.getElementById("account-email");if(e)e.textContent=user.email||"Google account";
       document.getElementById("lock-screen")?.classList.add("hidden");document.getElementById("app")?.classList.remove("hidden");
       requestAnimationFrame(()=>setTimeout(()=>{if(typeof initApp==="function")initApp();},50));
