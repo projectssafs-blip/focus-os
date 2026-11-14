@@ -380,6 +380,7 @@ function navigateTo(page) {
   if(page==='dashboard') renderDashboard();
   if(page==='analytics') { setTimeout(renderCharts,100); renderTimeBreakdown(); }
   if(page==='couples') window.FocusCouples?.loadPage();
+  if(page==='couple-focus') window.FocusCouples?.loadFocusPage();
   syncBottomNav(page);
   // scroll main content to top on page change
   document.querySelector('.main-content')?.scrollTo({top:0, behavior:'instant'});
@@ -407,7 +408,7 @@ function haptic(ms=8) {
 
 /* ── Sync bottom nav active state ── */
 function syncBottomNav(page) {
-  const staticPages = ['dashboard','daily','analytics','couples'];
+  const staticPages = ['dashboard','daily','analytics','couples','couple-focus'];
   const isDomainPage = !staticPages.includes(page);
   document.querySelectorAll('.bnav-btn[data-page]').forEach(b => {
     const active = b.dataset.page === page;

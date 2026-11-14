@@ -17,6 +17,14 @@ create table if not exists public.couple_members (
   primary key (couple_id, user_id)
 );
 
+-- Only the two linked accounts can read each other's display photo/name.
+create table if not exists public.couple_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  display_name text not null default 'Study partner' check (length(display_name) between 1 and 80),
+  avatar_url text,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.couple_invites (
   id uuid primary key default gen_random_uuid(),
   couple_id uuid not null references public.couples(id) on delete cascade,
@@ -79,6 +87,7 @@ create table if not exists public.couple_focus_sessions (
 
 alter table public.couples enable row level security;
 alter table public.couple_members enable row level security;
+alter table public.couple_profiles enable row level security;
 alter table public.couple_invites enable row level security;
 alter table public.couple_invitations enable row level security;
 alter table public.couple_events enable row level security;
@@ -99,6 +108,25 @@ $$;
 
 revoke all on function public.is_couple_member(uuid) from public, anon;
 grant execute on function public.is_couple_member(uuid) to authenticated;
+
+create or replace function public.is_study_partner(partner_user uuid)
+returns boolean language sql stable security definer
+set search_path = ''
+as $$
+  select auth.uid() is not null and exists (
+    select 1 from public.couple_members me
+    join public.couple_members partner using (couple_id)
+    where me.user_id = auth.uid() and partner.user_id = partner_user
+  );
+$$;
+revoke all on function public.is_study_partner(uuid) from public, anon;
+grant execute on function public.is_study_partner(uuid) to authenticated;
+
+drop policy if exists "Users and their partner can read couple profiles" on public.couple_profiles;
+create policy "Users and their partner can read couple profiles" on public.couple_profiles
+  for select to authenticated using (user_id = auth.uid() or public.is_study_partner(user_id));
+revoke all on public.couple_profiles from anon, authenticated;
+grant select on public.couple_profiles to authenticated;
 
 drop policy if exists "Members can read their couple" on public.couples;
 create policy "Members can read their couple" on public.couples
@@ -152,6 +180,25 @@ begin
   insert into public.couples(created_by) values (auth.uid()) returning id into new_id;
   insert into public.couple_members(couple_id, user_id) values (new_id, auth.uid());
   return new_id;
+end;
+$$;
+
+create or replace function public.save_my_couple_profile(p_display_name text, p_avatar_url text)
+returns void language plpgsql security definer
+set search_path = ''
+as $$
+declare safe_name text; safe_avatar text;
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  safe_name := left(coalesce(nullif(btrim(p_display_name), ''), 'Study partner'), 80);
+  safe_avatar := nullif(btrim(p_avatar_url), '');
+  if safe_avatar is not null and safe_avatar !~ '^https://([a-zA-Z0-9-]+\.)?googleusercontent\.com/[^[:space:]]*$' then
+    safe_avatar := null;
+  end if;
+  insert into public.couple_profiles(user_id, display_name, avatar_url, updated_at)
+    values (auth.uid(), safe_name, safe_avatar, now())
+    on conflict (user_id) do update set display_name = excluded.display_name,
+      avatar_url = excluded.avatar_url, updated_at = excluded.updated_at;
 end;
 $$;
 
@@ -323,6 +370,7 @@ end;
 $$;
 
 revoke all on function public.create_study_couple() from public, anon;
+revoke all on function public.save_my_couple_profile(text, text) from public, anon;
 revoke all on function public.create_study_couple_invite() from public, anon;
 revoke all on function public.accept_study_couple_invite(text) from public, anon;
 revoke all on function public.send_study_couple_portal_invite(text) from public, anon;
@@ -330,6 +378,7 @@ revoke all on function public.respond_to_study_couple_invite(uuid, boolean) from
 revoke all on function public.replace_my_shared_tasks(jsonb) from public, anon;
 revoke all on function public.leave_study_couple() from public, anon;
 grant execute on function public.create_study_couple() to authenticated;
+grant execute on function public.save_my_couple_profile(text, text) to authenticated;
 grant execute on function public.create_study_couple_invite() to authenticated;
 grant execute on function public.accept_study_couple_invite(text) to authenticated;
 grant execute on function public.send_study_couple_portal_invite(text) to authenticated;

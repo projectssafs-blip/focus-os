@@ -1,7 +1,7 @@
 /* Couple features use Supabase tables/RPCs. The browser key is publishable only;
    membership and visibility are enforced by the database policies in couples.sql. */
 window.FocusCouples = (() => {
-  let client=null,user=null,coupleId=null,channel=null,inboxChannel=null,refreshTimer=null,publishTimer=null,latestTasks=[],latestFocus=null,latestInvitations=[];
+  let client=null,user=null,coupleId=null,channel=null,inboxChannel=null,refreshTimer=null,clockTimer=null,publishTimer=null,latestTasks=[],latestFocus=null,latestInvitations=[],latestProfiles=[];
   const $=id=>document.getElementById(id);
   const escape=s=>Store.esc(s??'');
   const message=(text,isError=false)=>{const el=$('couple-message');if(el){el.textContent=text;el.classList.toggle('error',isError);el.classList.remove('hidden');}};
@@ -11,10 +11,10 @@ window.FocusCouples = (() => {
   async function initForUser(signedInUser){
     close();client=window.FocusSupabaseClient;user=signedInUser;
     if(!client||!user)return;
-    try{await loadRoom();subscribe();subscribeInbox();schedulePublish(1000);}
+    try{await call('save_my_couple_profile',{p_display_name:user.user_metadata?.full_name||user.user_metadata?.name||'Study partner',p_avatar_url:user.user_metadata?.picture||user.user_metadata?.avatar_url||''});await loadRoom();subscribe();subscribeInbox();schedulePublish(1000);}
     catch(e){console.error('Study partner setup:',e);renderSetupError(e);}
   }
-  function close(){if(channel&&client)client.removeChannel(channel);if(inboxChannel&&client)client.removeChannel(inboxChannel);channel=null;inboxChannel=null;clearInterval(refreshTimer);clearTimeout(publishTimer);refreshTimer=null;publishTimer=null;client=null;user=null;coupleId=null;latestTasks=[];latestFocus=null;latestInvitations=[];}
+  function close(){if(channel&&client)client.removeChannel(channel);if(inboxChannel&&client)client.removeChannel(inboxChannel);channel=null;inboxChannel=null;clearInterval(refreshTimer);clearInterval(clockTimer);clearTimeout(publishTimer);refreshTimer=null;clockTimer=null;publishTimer=null;client=null;user=null;coupleId=null;latestTasks=[];latestFocus=null;latestInvitations=[];latestProfiles=[];}
   function renderSetupError(error){const root=$('couples-content');if(!root)return;root.innerHTML=`<div class="page-header"><div><h2 class="page-title">♡ Profile &amp; Study Partner</h2><p class="page-sub">Connect privately and study together from anywhere.</p></div></div><div class="card couple-card"><h3>One setup step remains</h3><p>The secure couple tables are not ready yet. Run <strong>supabase/couples.sql</strong> in your Supabase SQL Editor, then reload this page.</p><details><summary>Technical detail</summary><p class="couple-muted">${escape(error?.message||'Setup could not be loaded.')}</p></details></div>`;}
 
   async function loadRoom(){
@@ -34,8 +34,12 @@ window.FocusCouples = (() => {
       ]);
       for(const r of [memberResult,eventResult,taskResult,focusResult])if(r.error)throw r.error;
       latestTasks=taskResult.data||[];latestFocus=focusResult.data||null;
-      renderRoom(memberResult.data||[],eventResult.data||[]);
-    }else renderUnpaired();
+      const memberIds=(memberResult.data||[]).map(m=>m.user_id);
+      const profileResult=memberIds.length?await client.from('couple_profiles').select('user_id,display_name,avatar_url').in('user_id',memberIds):{data:[],error:null};
+      if(profileResult.error)throw profileResult.error;
+      latestProfiles=profileResult.data||[];
+      renderRoom(memberResult.data||[],latestProfiles,eventResult.data||[]);
+    }else{clearInterval(refreshTimer);clearInterval(clockTimer);refreshTimer=null;clockTimer=null;latestProfiles=[];latestTasks=[];latestFocus=null;renderUnpaired();renderFocusPage([],[]);}
   }
 
   function renderUnpaired(){
@@ -55,7 +59,17 @@ window.FocusCouples = (() => {
 
   function updateInboxBadge(){const badge=$('couple-notice-badge');if(!badge)return;const count=latestInvitations.filter(i=>i.invitee_id===user?.id&&i.status==='pending'&&Date.now()-Date.parse(i.created_at)<7*86400000).length;badge.textContent=String(count);badge.classList.toggle('hidden',count===0);}
 
-  function renderRoom(members,events){
+  function avatarHTML(profile,label){
+    const initial=escape((profile?.display_name||label||'?').trim().slice(0,1).toUpperCase());
+    let src='';try{const url=new URL(profile?.avatar_url||'');if(url.protocol==='https:'&&(url.hostname==='googleusercontent.com'||url.hostname.endsWith('.googleusercontent.com')))src=url.href;}catch{}
+    return src?`<img class="couple-photo" src="${escape(src)}" alt="${escape(profile?.display_name||label)}" referrerpolicy="no-referrer" loading="lazy"/>`:`<span class="couple-photo couple-photo-fallback" aria-label="${escape(label)}">${initial}</span>`;
+  }
+  function pairHTML(members,profiles){
+    const me=profiles.find(p=>p.user_id===user?.id),partnerMember=members.find(m=>m.user_id!==user?.id),partner=profiles.find(p=>p.user_id===partnerMember?.user_id);
+    return `<div class="couple-pair"><div class="couple-person">${avatarHTML(me,'You')}<strong>${escape(me?.display_name||'You')}</strong><small>You</small></div><span class="couple-chain" aria-label="Connected">⛓</span><div class="couple-person">${partnerMember?avatarHTML(partner,'Study partner'):'<span class="couple-photo couple-photo-fallback">?</span>'}<strong>${escape(partner?.display_name||(partnerMember?'Study partner':'Waiting'))}</strong><small>${partnerMember?'Partner':'Waiting for partner'}</small></div></div>`;
+  }
+
+  function renderRoom(members,profiles,events){
     const root=$('couples-content');if(!root)return;
     const partner=members.find(m=>m.user_id!==user.id);
     const personal=latestTasks.filter(t=>t.owner_id===user.id),partners=latestTasks.filter(t=>t.owner_id!==user.id);
@@ -65,14 +79,28 @@ window.FocusCouples = (() => {
       .filter(t=>Number.isFinite(t.dueTs)&&t.dueTs>=today.getTime()).sort((a,b)=>a.dueTs-b.dueTs||a.who.localeCompare(b.who));
     const eventHtml=events.length?events.map(e=>`<li><span class="couple-event-dot">♡</span><span>${e.event_type==='partner_joined'?'Your partner joined the study room.':'Room updated.'}</span><time>${new Date(e.created_at).toLocaleString()}</time></li>`).join(''):'<li class="couple-muted">Room activity will appear here.</li>';
     root.innerHTML=`<div class="page-header"><div><h2 class="page-title">♡ Profile &amp; Study Partner</h2><p class="page-sub">A private study room for two.</p></div><button class="cancel-btn couple-leave" id="couple-leave">End shared room</button></div><div class="card couple-card couple-profile"><span class="couple-eyebrow">YOUR PROFILE</span><h3>Signed in to Focus OS</h3><p>${escape(user?.email||'Google account')} · private to you</p></div>
-      <div class="couple-grid"><section class="card couple-card"><span class="couple-eyebrow">CONNECTED ROOM</span><h3>${partner?'You and your study partner':'Your study room is ready'}</h3><p>${partner?'Both accounts are connected. Your email addresses stay private.':'Invite your partner with an in-portal invitation or one-time code.'}</p><div class="couple-members"><span class="couple-avatar">Y</span><span>You</span><span class="couple-link">↔</span><span class="couple-avatar partner-avatar">${partner?'P':'?'}</span><span>${partner?'Partner':'Waiting for partner'}</span></div><label for="couple-partner-email">Partner’s Google account email</label><input id="couple-partner-email" class="couple-input" type="email" autocomplete="off" maxlength="254" placeholder="name@example.com"/><button class="action-btn couple-primary" id="couple-portal-invite">Send in-portal invite</button><small class="couple-muted">This creates a notice inside their portal only. It does not send an email. The account must already exist in Focus OS.</small><button class="invite-toggle-btn" id="couple-invite">Create one-time code instead</button><div id="couple-code-result"></div></section>
+      <section class="card couple-card couple-together"><span class="couple-eyebrow">CONNECTED ROOM</span><h3>${partner?'You and your study partner':'Your study room is ready'}</h3>${pairHTML(members,profiles)}<p>${partner?'Your Google photos connect your profiles here. Account emails stay private.':'Invite your partner to complete your connected profiles.'}</p><label for="couple-partner-email">Partner’s Google account email</label><input id="couple-partner-email" class="couple-input" type="email" autocomplete="off" maxlength="254" placeholder="name@example.com"/><button class="action-btn couple-primary" id="couple-portal-invite">Send in-portal invite</button><small class="couple-muted">This creates a notice inside their portal only. It does not send an email. The account must already exist in Focus OS.</small><button class="invite-toggle-btn" id="couple-invite">Create one-time code instead</button><div id="couple-code-result"></div></section>
       <section class="card couple-card"><span class="couple-eyebrow">TODAY + UPCOMING</span><h3>Shared study plan</h3><p>Today, tomorrow and future tasks are shown. Tasks marked 🔒 by their owner never appear here.</p><div class="couple-task-list">${upcoming.length?upcoming.map(t=>`<article class="couple-task"><div><strong>${escape(t.title)}</strong><small>${escape(t.subject)} · ${escape(t.who)} · ${escape(t.due_date===todayKey()?'Today':t.due_date===tomorrowKey()?'Tomorrow':t.due_date)}</small></div><span class="couple-task-state ${t.is_done?'is-done':''}">${t.is_done?'Done':'Planned'}</span></article>`).join(''):'<p class="couple-muted">No upcoming shared tasks yet.</p>'}</div></section></div>
-      <section class="card couple-card couple-focus"><span class="couple-eyebrow">LIVE TOGETHER</span><h3>Shared focus timer</h3><p>Starting or stopping this timer updates the same room for both of you.</p><div id="couple-focus-status" class="couple-focus-status"></div><div class="couple-focus-controls"><input id="couple-focus-label" class="couple-input" maxlength="80" placeholder="What are you focusing on?"/><select id="couple-focus-duration" class="hours-select"><option value="25">25 minutes</option><option value="50">50 minutes</option><option value="75">75 minutes</option></select><button class="action-btn couple-primary" id="couple-focus-start">Start together</button><button class="cancel-btn" id="couple-focus-stop">Stop timer</button></div></section>
       <section class="card couple-card"><span class="couple-eyebrow">IN-PORTAL UPDATES</span><h3>Room activity</h3><ul class="couple-events">${eventHtml}</ul></section>
       <div class="card couple-card couple-privacy"><h3>Privacy settings</h3><p>Tap ↗ beside any of your tasks to share it, or 🔒 to hide it. Your personal notes, diary, reminders and account email are never shared. Only invited signed-in members can read this room.</p></div>
       <p id="couple-message" class="couple-message hidden" role="status"></p>`;
     $('couple-invite')?.addEventListener('click',makeInvite);$('couple-portal-invite')?.addEventListener('click',sendPortalInvite);$('couple-leave')?.addEventListener('click',leaveRoom);
     if(partner){$('couple-partner-email').disabled=true;$('couple-portal-invite').disabled=true;$('couple-invite').disabled=true;}
+    renderFocusPage(members,profiles);
+  }
+
+  function renderFocusPage(members=[],profiles=[]){
+    const root=$('couple-focus-content');if(!root)return;
+    if(!user){root.innerHTML='<div class="card couple-card"><p>Sign in to use the shared focus timer.</p></div>';return;}
+    const signature=`${coupleId||'none'}:${members.length}`;
+    if(root.dataset.roomSignature===signature&&$('couple-focus-status')){renderFocus();return;}
+    root.dataset.roomSignature=signature;
+    const connected=members.length===2;
+    const timerHtml=connected
+      ? `<section class="card couple-card shared-timer-card"><span class="couple-eyebrow">STUDYING TOGETHER</span>${pairHTML(members,profiles)}<div class="shared-timer-face" id="couple-focus-status" aria-live="polite"></div><div class="shared-timer-form"><label for="couple-focus-label">What are you focusing on?</label><input id="couple-focus-label" class="couple-input" maxlength="80" placeholder="e.g. DICD Unit 2 revision"/><label for="couple-focus-duration">Session length</label><div class="custom-duration-row"><input id="couple-focus-duration" class="couple-input custom-duration" type="number" min="1" max="240" step="1" value="25"/><span>minutes · choose 1–240</span></div><div class="shared-timer-actions"><button class="action-btn couple-primary" id="couple-focus-start">Start together</button><button class="cancel-btn" id="couple-focus-stop">Stop timer</button></div></div></section>`
+      : `<section class="card couple-card shared-timer-card"><span class="couple-eyebrow">WAITING FOR YOUR PARTNER</span>${members.length?pairHTML(members,profiles):''}<h3>Connect a study partner to start together</h3><p>The shared timer appears here after both accounts join your room.</p><button class="action-btn couple-primary" id="go-to-couples">Open Profile &amp; Study Partner</button></section>`;
+    root.innerHTML=`<div class="page-header"><div><h2 class="page-title">⏱ Shared Focus Timer</h2><p class="page-sub">Choose your own session length and focus together.</p></div></div>${timerHtml}`;
+    $('go-to-couples')?.addEventListener('click',()=>navigateTo('couples'));
     $('couple-focus-start')?.addEventListener('click',startFocus);$('couple-focus-stop')?.addEventListener('click',stopFocus);
     renderFocus();
   }
@@ -111,14 +139,17 @@ window.FocusCouples = (() => {
       .on('postgres_changes',{event:'*',schema:'public',table:'couple_events',filter:`couple_id=eq.${coupleId}`},()=>loadPage())
       .subscribe();
     clearInterval(refreshTimer);refreshTimer=setInterval(()=>{if(coupleId)refreshFocus();},5000);
+    clearInterval(clockTimer);clockTimer=setInterval(renderFocus,1000);
   }
   function subscribeInbox(){if(!client||!user)return;if(inboxChannel)client.removeChannel(inboxChannel);inboxChannel=client.channel('focus-inbox-'+user.id)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'couple_invitations',filter:`invitee_id=eq.${user.id}`},()=>{loadPage();if(typeof showToast==='function')showToast('♡ New study partner invitation');})
     .subscribe();}
   async function refreshFocus(){if(!client||!coupleId)return;try{const {data,error}=await client.from('couple_focus_sessions').select('started_by,started_at,duration_seconds,label,status,updated_at').eq('couple_id',coupleId).maybeSingle();if(error)throw error;latestFocus=data;renderFocus();}catch(e){console.error('Shared timer refresh:',e);}}
-  async function startFocus(){if(!coupleId)return;const label=($('couple-focus-label')?.value.trim()||'Focus session').slice(0,80),minutes=Number($('couple-focus-duration')?.value)||25;try{const {error}=await client.from('couple_focus_sessions').upsert({couple_id:coupleId,started_by:user.id,started_at:new Date().toISOString(),duration_seconds:minutes*60,label,status:'running',updated_at:new Date().toISOString()},{onConflict:'couple_id'});if(error)throw error;await refreshFocus();}catch(e){message(e.message||'Could not start the shared timer.',true);}}
+  async function startFocus(){if(!coupleId)return;const label=($('couple-focus-label')?.value.trim()||'Focus session').slice(0,80),minutes=Number($('couple-focus-duration')?.value);if(!Number.isInteger(minutes)||minutes<1||minutes>240){message('Choose a whole number from 1 to 240 minutes.',true);return;}try{const {error}=await client.from('couple_focus_sessions').upsert({couple_id:coupleId,started_by:user.id,started_at:new Date().toISOString(),duration_seconds:minutes*60,label,status:'running',updated_at:new Date().toISOString()},{onConflict:'couple_id'});if(error)throw error;await refreshFocus();}catch(e){message(e.message||'Could not start the shared timer.',true);}}
   async function stopFocus(){if(!coupleId||!latestFocus)return;try{const {error}=await client.from('couple_focus_sessions').upsert({...latestFocus,couple_id:coupleId,status:'stopped',updated_at:new Date().toISOString()},{onConflict:'couple_id'});if(error)throw error;await refreshFocus();}catch(e){message(e.message||'Could not stop the shared timer.',true);}}
-  function renderFocus(){const el=$('couple-focus-status');if(!el)return;if(!latestFocus||latestFocus.status!=='running'){el.textContent='No shared focus session is running.';el.classList.remove('is-running');return;}const end=Date.parse(latestFocus.started_at)+Number(latestFocus.duration_seconds)*1000,remaining=Math.max(0,Math.ceil((end-Date.now())/1000));if(remaining===0){el.textContent=`✓ ${latestFocus.label} · session complete`;el.classList.remove('is-running');return;}const mm=Math.floor(remaining/60),ss=remaining%60;el.textContent=`● ${latestFocus.label} · ${mm}:${String(ss).padStart(2,'0')} remaining`;el.classList.add('is-running');}
+  function renderFocus(){const el=$('couple-focus-status');if(!el)return;if(!latestFocus||latestFocus.status!=='running'){el.textContent='No shared focus session is running. Set any duration from 1 to 240 minutes.';el.classList.remove('is-running');return;}const end=Date.parse(latestFocus.started_at)+Number(latestFocus.duration_seconds)*1000,remaining=Math.max(0,Math.ceil((end-Date.now())/1000));if(remaining===0){el.textContent=`✓ ${latestFocus.label} · session complete`;el.classList.remove('is-running');return;}const hh=Math.floor(remaining/3600),mm=Math.floor((remaining%3600)/60),ss=remaining%60;el.textContent=`${latestFocus.label} · ${hh?String(hh).padStart(2,'0')+':':''}${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;el.classList.add('is-running');}
 
-  return {initForUser,close,loadPage,onLocalDataChanged};
+  async function loadFocusPage(){if(!user){renderFocusPage([],[]);return;}try{await loadRoom();}catch(e){console.error(e);const root=$('couple-focus-content');if(root)root.innerHTML=`<section class="card couple-card"><h3>Timer setup needed</h3><p>Run the latest <strong>supabase/couples.sql</strong> in Supabase, then reload.</p><p class="couple-muted">${escape(e.message||'')}</p></section>`;}}
+
+  return {initForUser,close,loadPage,loadFocusPage,onLocalDataChanged};
 })();

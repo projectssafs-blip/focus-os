@@ -6,16 +6,17 @@ This feature shares a small study plan and one live focus timer between two sign
 
 - Task title, subject, due date and completion status for upcoming tasks not marked private.
 - A room activity notice when the second account joins.
-- One shared focus timer and its label.
+- One shared focus timer and its label, with a custom duration from 1 to 240 minutes.
+- Google profile photos and display names in the connected-couple panel. If an account has no photo, the portal shows an initial.
 
-Personal notes, daily logs, reminders, analytics, account email and tasks marked **🔒** are not copied to the couple tables. A task starts shared by default; click its arrow button to hide it before adding private details.
+Personal notes, daily logs, reminders, analytics and account email are not copied to the couple tables. Profile photos and display names are visible only to the linked partner. A task starts shared by default; click its arrow button to hide it before adding private details.
 
 ## Supabase steps
 
 1. Open the existing Focus OS project in Supabase.
 2. Open **SQL Editor → New query**.
 3. From this repository, open `supabase/couples.sql`, copy all of it into the editor and select **Run**. A successful schema setup can say “Success. No rows returned.” This creates the room, invite, shared-task and timer tables plus server-side access policies and RPC functions. It does not require a service-role key in the website.
-4. In **Table Editor**, confirm the `couples`, `couple_members`, `couple_invites`, `couple_invitations`, `couple_events`, `couple_tasks`, and `couple_focus_sessions` tables exist. They will be empty until the portal is used.
+4. If you ran an earlier version of this setup, run the updated `supabase/couples.sql` again. It adds the private profile-photo table and helper function; it does not delete existing study data. In **Table Editor**, confirm the `couples`, `couple_members`, `couple_profiles`, `couple_invites`, `couple_invitations`, `couple_events`, `couple_tasks`, and `couple_focus_sessions` tables exist.
 5. Deploy the updated website files to the same Vercel project (push to the connected GitHub branch or deploy from Vercel). No Vercel environment variables need to be added for this feature. Keep `supabase-config.js` limited to the project URL and publishable key; never put a service-role/secret key in browser files.
 
 ## Use it
@@ -23,7 +24,7 @@ Personal notes, daily logs, reminders, analytics, account email and tasks marked
 1. Sign in to Focus OS with your Google account and open **Profile & Study Partner** in the sidebar.
 2. Select **Create study room**, then enter your partner's Google account email and choose **Send in-portal invite**. This does not send email; it creates a private notification and badge in their portal when that account signs in.
 3. If your partner is not registered yet, create a one-time code and share it privately. They sign in with their own Google account, open the same section and enter the code. The code expires after seven days and can only be used once.
-4. Both accounts should then see each other's non-private upcoming tasks, including today and tomorrow. Use ↗ / 🔒 beside a task to share or hide it. Start the shared focus timer from either account.
+4. Both accounts should then see each other's non-private upcoming tasks, including today and tomorrow. Use ↗ / 🔒 beside a task to share or hide it. Open **Shared Focus Timer** in the sidebar to set any whole-minute duration from 1 to 240 and start together.
 5. Test with only harmless sample tasks first. Confirm a private task does not appear in `couple_tasks` and cannot be read from the other account.
 
 ## Privacy and costs
