@@ -313,6 +313,12 @@ function renderDate() {
    NAVIGATION
 ════════════════════════════════════════════ */
 function initNav() {
+  document.getElementById('planner-add-task')?.addEventListener('click', () => {
+    const firstDomain=getDomains()[0];
+    if(!firstDomain){showToast('Add a study section first using Manage Sections.','error');return;}
+    navigateTo(firstDomain.id);
+    requestAnimationFrame(()=>document.getElementById(firstDomain.id+'-task-input')?.focus());
+  });
   document.getElementById('dashboard-add-task')?.addEventListener('click', () => {
     const firstDomain = getDomains()[0];
     if (!firstDomain) {
@@ -378,6 +384,7 @@ function navigateTo(page) {
   const tp=document.getElementById('topbar-page');
   if(tp) tp.textContent = btn ? btn.textContent.trim() : page;
   if(page==='dashboard') renderDashboard();
+  if(page==='planner') renderPlanner();
   if(page==='analytics') { setTimeout(renderCharts,100); renderTimeBreakdown(); }
   if(page==='couples') window.FocusCouples?.loadPage();
   if(page==='couple-focus') window.FocusCouples?.loadFocusPage();
@@ -408,7 +415,7 @@ function haptic(ms=8) {
 
 /* ── Sync bottom nav active state ── */
 function syncBottomNav(page) {
-  const staticPages = ['dashboard','daily','analytics','couples','couple-focus'];
+  const staticPages = ['dashboard','planner','daily','analytics','couples','couple-focus'];
   const isDomainPage = !staticPages.includes(page);
   document.querySelectorAll('.bnav-btn[data-page]').forEach(b => {
     const active = b.dataset.page === page;
@@ -424,6 +431,35 @@ function syncBottomNav(page) {
   }
   const menuBtn = document.getElementById('bnav-menu-btn');
   if(menuBtn) menuBtn.classList.remove('active');
+}
+
+let plannerRange='upcoming';
+function renderPlanner(){
+  const root=document.getElementById('planner-content');if(!root)return;
+  const filters=[['today','Today'],['tomorrow','Tomorrow'],['upcoming','Next 7 days'],['all','All dates']];
+  const now=new Date();now.setHours(0,0,0,0);
+  const tomorrow=new Date(now);tomorrow.setDate(tomorrow.getDate()+1);
+  const weekEnd=new Date(now);weekEnd.setDate(weekEnd.getDate()+7);
+  const today=todayKey(),tomorrowDate=tomorrowKey();
+  const items=[];
+  getDomains().forEach(domain=>getTasks(domain.id).forEach((task,index)=>{
+    const key=task.taskDate||today,date=parseDateKey(key);
+    if(!date||Number.isNaN(date.getTime()))return;
+    date.setHours(0,0,0,0);
+    const include=plannerRange==='all'||(plannerRange==='today'&&key===today)||(plannerRange==='tomorrow'&&key===tomorrowDate)||(plannerRange==='upcoming'&&date>=now&&date<=weekEnd);
+    if(include)items.push({domain,task,index,key,date});
+  }));
+  items.sort((a,b)=>a.date-b.date||a.domain.name.localeCompare(b.domain.name)||Number(a.task.done)-Number(b.task.done));
+  const grouped=new Map();items.forEach(item=>{if(!grouped.has(item.key))grouped.set(item.key,[]);grouped.get(item.key).push(item);});
+  const groups=[...grouped.entries()].map(([key,rows])=>{
+    const date=parseDateKey(key);date.setHours(0,0,0,0);
+    const label=key===today?'Today':key===tomorrowDate?'Tomorrow':date.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
+    return `<section class="planner-day"><header><h3>${Store.esc(label)}</h3><span>${rows.filter(r=>!r.task.done).length} left · ${rows.length} total</span></header><ul>${rows.map(({domain,task,index,key})=>`<li class="planner-task${task.done?' is-done':''}"><input type="checkbox" data-planner-toggle="${Store.esc(domain.id)}:${index}" aria-label="Mark ${Store.esc(task.text)} ${task.done?'incomplete':'complete'}" ${task.done?'checked':''}><button class="planner-task-open" data-planner-open="${Store.esc(domain.id)}" data-planner-date="${Store.esc(key)}"><span class="planner-domain" style="--domain-color:${Store.esc(domain.color||'#9e9b96')}">${Store.esc(domain.icon||'•')} ${Store.esc(domain.name)}</span><span class="planner-task-title">${Store.esc(task.text||'Untitled task')}</span></button><span class="planner-task-state">${task.done?'Done':'To do'}</span></li>`).join('')}</ul></section>`;
+  }).join('');
+  root.innerHTML=`<div class="planner-toolbar" role="group" aria-label="Filter tasks by date">${filters.map(([id,label])=>`<button class="planner-filter${plannerRange===id?' active':''}" data-planner-range="${id}" aria-pressed="${plannerRange===id}">${label}</button>`).join('')}</div>${groups||`<div class="card planner-empty"><span aria-hidden="true">✦</span><h3>No tasks in this view</h3><p>Try another date range or add a task to one of your study sections.</p></div>`}`;
+  root.querySelectorAll('[data-planner-range]').forEach(button=>button.addEventListener('click',()=>{plannerRange=button.dataset.plannerRange;renderPlanner();}));
+  root.querySelectorAll('[data-planner-toggle]').forEach(input=>input.addEventListener('change',()=>{const [domain,index]=input.dataset.plannerToggle.split(':');toggleTask(domain,Number(index));renderPlanner();}));
+  root.querySelectorAll('[data-planner-open]').forEach(button=>button.addEventListener('click',()=>{const domain=button.dataset.plannerOpen;setTaskDateView(domain,button.dataset.plannerDate);navigateTo(domain);}));
 }
 
 function handleCustomDate(domain, isoVal) {
